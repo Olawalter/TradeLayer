@@ -1,0 +1,11 @@
+{
+  "name": "TradeLayer",
+  "network": "studionet",
+  "chainId": 61999,
+  "rpcUrl": "https://studio.genlayer.com/api",
+  "contractAddress": "0xB9526c7Aaefd3a81C056Df1102EcBF5Ca610CCA4",
+  "deployTxHash": "0xbb658933a1d2b91a82ad123838a2f2b95369b2da188bc7295369889f1eebc41f",
+  "contractFile": "contracts/tradelayer.py",
+  "deployedAt": "2026-08-24T19:25:26.171Z",
+  "explorer": "https://explorer-studio.genlayer.com/address/0xB9526c7Aaefd3a81C056Df1102EcBF5Ca610CCA4"
+}

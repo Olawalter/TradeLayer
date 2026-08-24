@@ -1,0 +1,10 @@
+node_modules/
+.env
+.env.local
+.next/
+artifacts/
+.gltest_cache/
+__pycache__/
+*.pyc
+.pytest_cache/
+*.log
