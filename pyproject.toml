@@ -4,6 +4,9 @@ python_files = ["test_*.py"]
 python_classes = ["Test*"]
 python_functions = ["test_*"]
 addopts = "-v --tb=short"
+markers = [
+    "slow: drives a full on-chain lifecycle; minutes, not seconds",
+]
 
 [tool.coverage.run]
 source = ["contracts"]
