@@ -223,6 +223,39 @@ cd web && npm test
 30 unit tests over the pure logic: wei formatting at full BigInt precision, and
 the action-gating table exhaustively, with no network at all.
 
+## 7f. Deploying the dApp to Vercel
+
+**Root Directory must be `web`.** This is the one setting that decides whether
+the deploy works. The repository root is `tradelayer-scripts` — a package with
+no `build` script and no `next` dependency, holding the deploy and verification
+tooling. Vercel's import lands there by default, detects no framework, and
+fails. The Next app is in `web/`.
+
+| Setting | Value |
+|---|---|
+| Root Directory | `web` |
+| Framework preset | Next.js (auto-detected once the root is right) |
+| Build command | default |
+| Output directory | default |
+| Node version | default |
+| `NEXT_PUBLIC_CONTRACT_ADDRESS` | `0xE9b6e3FC11EbbB1adA32219CEBF43c9d4a3113e5` |
+
+The environment variable is belt-and-braces: `web/src/lib/contract.ts` falls
+back to the same address when it is unset, so an *unset* variable serves the
+right contract. A *wrongly set* one does not — a sibling project's address in
+this field is how AgentBet ended up serving the wrong contract in production,
+and the error surfaced only as unexplained reverts. Set it deliberately.
+
+Two things worth re-checking before any deploy, both from past incidents:
+
+```bash
+# 1. Vercel runs npm 10. A lockfile written by npm 11 can break `npm ci`.
+npx npm@10 ci --dry-run
+
+# 2. No sibling project's contract address in the built bundle.
+cd web && npm run build && grep -rhoE "0x[0-9a-fA-F]{40}" .next/static | sort -u
+```
+
 ## 8. Reading a failure
 
 A reverted GenLayer transaction is not obvious from the receipt's top level. The
