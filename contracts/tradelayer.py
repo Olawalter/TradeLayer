@@ -1237,7 +1237,7 @@ class TradeLayer(gl.Contract):
 
         # Bounded by construction: the remedies were validated to total <=
         # 10000 at creation, and this clamp is the belt to that braces.
-        if False:
+        if payout_bps > BPS_DENOMINATOR:
             payout_bps = BPS_DENOMINATOR
 
         t.payout_bps = u256(payout_bps)

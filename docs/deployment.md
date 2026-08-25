@@ -153,6 +153,24 @@ excerpt    : ""
 An empty excerpt is the good failure: `gl.nondet.web.render` raised on the 404,
 so nothing was fenced as authoritative.
 
+## 7c. Verify the documentation
+
+```bash
+npm run verify
+```
+
+Checks every factual claim in the README against a machine source rather than
+against memory: the address and deploy transaction against
+`deploy/deployment.json`; the source sha256 against the file; the deployed bytes
+against `gen_getContractCode`; the method and payable counts against
+`gen_getContractSchema`; the test count against what pytest collects; the guard
+count against the table in `docs/escrow-security.md`; and every transaction hash
+and wallet delta in the verified-E2E table against `lifecycle.log`.
+
+Documentation drifts silently, and a README is the first thing a reader trusts.
+Two wrong transaction hashes shipped in a sibling project's write-up before a
+check like this existed.
+
 ## 8. Reading a failure
 
 A reverted GenLayer transaction is not obvious from the receipt's top level. The

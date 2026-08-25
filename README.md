@@ -331,38 +331,45 @@ instructions, including how to read a reverted transaction: [`docs/deployment.md
 
 Every row below is a transaction against
 `0x699fff65298c7ba2797DF236E5eB1C0DDB3c3A0F` on StudioNet, from one run of
-`npm run lifecycle`. Trade `TL-1000`, 0.5 GEN of real escrow, **0 failures**.
+`npm run lifecycle`. Trade `TL-1001`, 0.5 GEN of real escrow, **0 failures**.
 
 | Step | Transaction | Outcome |
 |---|---|---|
-| create trade | `0xc0c59bc63a8220a18079f414dcf8c8a187d6cac0a8ce947b52c0915c351c8099` | remedy table stored, nothing deposited |
-| seller accepts | `0xfd9d4e1e4a9eba0600cc3ccde287f5c35a1699b83eb1acd3f0931a3a364ab88c` | `accepted` |
-| buyer funds 0.5 GEN | `0xe43d0a567854b75ded5d1a4e2fc125a3d5a056163bb6a4120b54cb2a8c8f57ce` | buyer balance falls; GEN in custody |
-| second funding attempt | `0x1e11b32aa2bbf88246ec4d8961cc3fa6912b10629b2ca906674b913fbe850143` | **rejected** — "already funded", ledger unchanged |
-| seller ships | `0x88c3837ae619b0e5105634d838abc8ed1f934c9e123ec20ce241e55318c83eea` | carrier ref `MAEU-4471-2026` bound pre-dispute |
-| delivery recorded | `0xac11ff91f678e88af260a10bff01c020d72fb56ae152f7f530b89220cb973009` | dispute window opens |
-| seller files inspection report | `0x12e8b70a…` (SUPPORTING) | hash-anchored |
-| buyer files a statement | `0xa20ea2a3…` (PARTY_CLAIM) | recorded, establishes nothing |
-| seller self-declares AUTHORITATIVE | tx submitted | **rejected** — parties may not write that tier |
-| buyer disputes | `0xc03aaa1cf1844c22a8eed462f719e76259205deec5dfbff17567b63fbd28576a` | `disputed` |
-| seller responds | `0xd292a6de36629ddc2f5dd78f6c35cec17df629a0e51fd2a84c0e0009d1e140c3` | response recorded |
-| freeze the package | `0xbb326e21d982a04080ec959ef84792df9eb2757c2fa2ae79e244dce44f2bc981` | 64-char digest recorded |
-| file evidence while frozen | `0x3c4c0aeff411d5047e2c049acaaac4dfaa6432697717bacb8aa659aeb6cb03f7` | **rejected** — "the evidence package is frozen" |
-| **GenLayer adjudicates** | `0xed28444e6180c8237110ed8d152acaaa53b90af0ca732f40c704f05196c0569e` | 4 findings, `SELLER_WIN`, `payout_bps 0` |
-| finalize during appeal window | `0xd04699c0c02ed7c9a352c885e7626f7de8c9343a640bb3e219d3bd35e5626279` | **rejected** — "the appeal window is still open" |
-| finalize | `0xb82244a49e57684a322b8058c5ce1b16fd9d40e68b27fe7ea6ea45517683eb4d` | `finalized`, settlement armed |
-| settle before the delay | `0xf712873ecc86d2ec6026c4762e96e3fe9dc9101befb53efaffceca5662b8e5e1` | **rejected** — "still arming" |
-| **settle** | `0xa2c69c4b965c83d6acb83b04f84972a6c7138c1cc2ba20112182a23173c7f4b8` | seller **+0.5 GEN**, buyer **0**, ledger zeroed |
-| second settlement | `0xf9662f6f04a6b7a1659d601ab23deebca66d66e3e01d91b45ec7d4245e9fddc2` | **rejected**, no additional value left the contract |
+| create_trade | `0xb178f0083910fc86f896539e167c5a123e112d634bbbf786ab788d4a2ab87456` | accepted |
+| accept_trade | `0x88cebc7a08ca3c0188f1357a6e6e0ad8ee9266d8536f3ecb4377ca24f2ae5f05` | accepted |
+| fund_trade 0.5 GEN | `0xf3e8267218732235ad857127e43ebe3f11e6c6f2cc19dd4e1cee73bd7a269914` | accepted |
+| underfund attempt | `0x9060d4637264ffc77e7c0b63e3df925710809f3a042b3b37612b8fb6129118e5` | **rejected** — this trade is already funded |
+| mark_shipped | `0xd8a39d2831c5bdcab18cd52c974b76e76216bc76705a3e7036a0a0868132a6b3` | accepted |
+| seller self-certifies delivery early | `0x402c87023e094fdfea31254dd502ba0f82056575bd18fb950ca11d212c8836db` | **rejected** — before the agreed delivery deadline, only the buyer may record delivery — the… |
+| buyer records delivery | `0x2cae89ee27a3d79b9a7b421cc4bdb895b166147ca32985f44e2dd2fbc0d1ade7` | accepted |
+| seller files inspection report | `0x1d7e0f82abe571f41dcffe687c38bd36d6ae40565084a31c2bbb5fc4a416be21` | accepted |
+| buyer files a statement | `0x36b9ef05b3a8fc8027dfbbbba09e29c3a0a7eb6ba86bd2ce1a1f53c4d44bc008` | accepted |
+| seller self-declares AUTHORITATIVE | `0xb5aebbb8f4e172a7573a2c05008a4f4e3cd302164bd65db4c212e7b2716d4fad` | **rejected** — parties may file SUPPORTING or PARTY_CLAIM evidence; AUTHORITATIVE records… |
+| open_dispute | `0xc3cbb3554c258c46f46e910781b8208612f200e88d62a8faf950cbae3bf4f94f` | accepted |
+| respond_to_dispute | `0x46da71152ef66be6c537f76b1c3f5701e04cc011649ec2249666ae18f09e32b3` | accepted |
+| begin_adjudication | `0x53b68fb7dad0ceddf0751a0be84cb421f11430cdc86d10bd76d232b2e2e9f886` | accepted |
+| file evidence while frozen | `0xa9c3ca6d2a231f41195371b2fe17d9d0e68ed1b50283db4d966f15a7fdc79f0f` | **rejected** — the evidence package is frozen: evidence is not accepted in the current trade… |
+| adjudicate | `0xc06963b67b8f1b825378c066227f767be9bef10f1d83ebf2433db43890309f9f` | accepted |
+| finalize during appeal window | `0xa1f814ade5ae6816cfc0d98f86436f7cc5932704ed68888e2f0da14332c2466a` | **rejected** — the appeal window is still open |
+| finalize | `0x2c6cc881c2d25a5902103e3eb50615502a53067ac12c6285552db5a69ac6bb61` | accepted |
+| settle before the delay elapses | `0x24def828c5c15f5a8a383f0a9ed171dba5c269cd4041580876fc1718fc35b027` | **rejected** — the settlement window is still arming; settlement unlocks shortly after… |
+| settle | `0x32b5702204862a28e4b6217de73e043520b5aacda025997b8a6787b7a9211d0e` | accepted |
+| second settle | `0x7a5d3f37cb626cbf00a613ce374ffa2f79447d0ed0afee6fab5f273238beb46d` | **rejected** — this trade has no finalized verdict to settle |
 
 Wallet deltas, not just contract state:
 
 ```
-seller 211220000000000000000 -> 211720000000000000000   (delta +500000000000000000)
-buyer  214019999999999999900 -> 214019999999999999900   (delta 0)
+seller 211720000000000000000 -> 212220000000000000000   (delta +500000000000000000)
+buyer  212519999999999999900 -> 212519999999999999900   (delta 0)
 ```
 
-The two payouts reconstitute the escrow exactly.
+The two payouts reconstitute the escrow exactly. Full transcript in
+`lifecycle.log`.
+
+Live integration suite (`pytest tests/integration --network studionet`):
+**8 passed** — invariants swept across every trade on the deployment, plus a
+no-privileged-escape check read from the chain's own schema via
+`gen_getContractSchema`, not from the local source file.
 
 ### What the panel actually did
 
@@ -372,7 +379,7 @@ issues — so the derived payout was 0 bps and the seller kept the escrow. That 
 the burden of proof working, not the system failing to decide.
 
 An on-chain probe (`npm run probe`, tx
-`0x811fbd9b8c1676bfaded12ddafb3e0a7fa084c4f9c6c97b44a14bdda5f66b7bf`) confirms
+`0xbe42203296b954fa205ae08468d3c1114f6fe5b9a9e6ea150d3b8ad9b052ecdb`) confirms
 why, and confirms it fails in the right direction:
 
 ```
@@ -384,14 +391,15 @@ excerpt    : ""
 `gl.nondet.web.render` **raises** on the 404 rather than returning GitHub's
 error page — so a "404: Not Found" body is never presented to the panel as an
 authoritative carrier record. The panel is told plainly that no record could be
-retrieved, and reasons from that:
+retrieved, and reasons from that. From an earlier run's rationale, verbatim:
 
 > "The seller's recorded shipment time is not proof of loading and no
 > authoritative carrier record was retrieved to establish shipment before the
 > deadline."
 
 That sentence is the protocol's own rule coming back out of a live validator
-panel.
+panel — the rule exists precisely so a seller's own bookkeeping cannot stand in
+for a carrier record.
 
 **Why the record is unreachable:** the contract binds a registry under
 `github.com/Olawalter/TradeLayer`, and that repository is not published yet.

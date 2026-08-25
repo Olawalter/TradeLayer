@@ -51,8 +51,12 @@ def deployed_schema() -> dict:
         "jsonrpc": "2.0", "id": 1,
         "method": "gen_getContractSchema", "params": [DEPLOYED],
     }).encode()
-    req = urllib.request.Request(
-        RPC_URL, data=body, headers={"Content-Type": "application/json"})
+    # An explicit User-Agent is required: urllib's default is rejected with a
+    # bare 403, which reads like an auth problem and is not one.
+    req = urllib.request.Request(RPC_URL, data=body, headers={
+        "Content-Type": "application/json",
+        "User-Agent": "tradelayer-integration-tests/1.0",
+    })
     with urllib.request.urlopen(req, timeout=60) as resp:
         payload = json.loads(resp.read())
     assert "error" not in payload, f"schema fetch failed: {payload.get('error')}"
