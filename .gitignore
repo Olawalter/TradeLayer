@@ -11,3 +11,5 @@ __pycache__/
 
 # scratch probes written by review agents; never part of the suite
 tests/direct/test_zz_*.py
+contracts/*.bak
+contracts/*.m*bak
