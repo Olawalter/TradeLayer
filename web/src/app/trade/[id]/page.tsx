@@ -23,11 +23,19 @@ export default function TradeRoom({ params }: { params: Promise<{ id: string }> 
   const { address } = useWallet();
 
   const trade = useRead<Trade>("get_trade", [id], 20_000);
-  const terms = useRead<AgreementTerms>("get_agreement_terms", [id], 60_000);
-  const evidence = useRead<EvidencePackage>("get_evidence", [id], 20_000);
-  const dispute = useRead<Dispute>("get_dispute", [id], 20_000);
-  const findings = useRead<Findings>("get_findings", [id], 20_000);
-  const settlement = useRead<Settlement>("get_settlement", [id], 20_000);
+
+  // Every other view reverts for a trade that does not exist, so they wait
+  // until the primary read has CONFIRMED one. Gating on `error === null` would
+  // be too late — on mount nothing has failed yet, so all six would fire the
+  // wasted burst anyway. This costs the dependents one round trip and saves a
+  // mistyped id from hammering a rate-limited endpoint on every poll.
+  const ok = trade.data !== null;
+
+  const terms = useRead<AgreementTerms>(ok ? "get_agreement_terms" : null, [id], 60_000);
+  const evidence = useRead<EvidencePackage>(ok ? "get_evidence" : null, [id], 20_000);
+  const dispute = useRead<Dispute>(ok ? "get_dispute" : null, [id], 20_000);
+  const findings = useRead<Findings>(ok ? "get_findings" : null, [id], 20_000);
+  const settlement = useRead<Settlement>(ok ? "get_settlement" : null, [id], 20_000);
   const config = useRead<ProtocolConfig>("get_config", [], 0);
 
   const t = trade.data;
