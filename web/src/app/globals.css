@@ -1,0 +1,203 @@
+@import "tailwindcss";
+
+/* ─────────────────────────────────────────────────────────────────────────
+   TradeLayer — "the manifest"
+
+   Near-black canvas, almost no colour noise. Hierarchy comes from scale and
+   weight contrast, never from elevation: there are no shadows and no
+   gradients anywhere in this system. An ultralight editorial serif does the
+   display work, a condensed grotesque does the credit-roll labels, and a
+   mono carries every number, hash and address.
+
+   Gold is the single saturated note and it is rationed: value, verified
+   status, and the primary action. Green and red exist only for settled and
+   for disputed/critical — they are outcome colours, not decoration.
+   ───────────────────────────────────────────────────────────────────────── */
+
+:root {
+  /* canvas */
+  --ink: #08090a;           /* base canvas */
+  --ink-lift: #0e1012;      /* sub-panels, table zebra */
+  --ink-raise: #141719;     /* input wells, hover */
+
+  /* strokes — hairlines only, never boxes with fills */
+  --rule: #1e2225;
+  --rule-strong: #2c3237;
+
+  /* type */
+  --paper: #f4f2ed;         /* primary foreground */
+  --paper-dim: #9aa0a6;     /* secondary */
+  --paper-faint: #5e646a;   /* tertiary, meta */
+
+  /* the single saturated note */
+  --gold: #c9a227;
+  --gold-bright: #e3bd45;
+  --gold-wash: rgba(201, 162, 39, 0.10);
+
+  /* outcomes only */
+  --verified: #4f9d69;
+  --verified-wash: rgba(79, 157, 105, 0.10);
+  --critical: #c4483f;
+  --critical-wash: rgba(196, 72, 63, 0.10);
+
+  --radius: 0px;            /* sharp, without exception */
+}
+
+@theme inline {
+  --color-ink: var(--ink);
+  --color-ink-lift: var(--ink-lift);
+  --color-ink-raise: var(--ink-raise);
+  --color-rule: var(--rule);
+  --color-rule-strong: var(--rule-strong);
+  --color-paper: var(--paper);
+  --color-paper-dim: var(--paper-dim);
+  --color-paper-faint: var(--paper-faint);
+  --color-gold: var(--gold);
+  --color-gold-bright: var(--gold-bright);
+  --color-verified: var(--verified);
+  --color-critical: var(--critical);
+
+  --font-display: var(--font-cormorant), Georgia, "Times New Roman", serif;
+  --font-sans: var(--font-archivo), system-ui, -apple-system, sans-serif;
+  --font-condensed: var(--font-archivo-narrow), "Arial Narrow", sans-serif;
+  --font-mono: var(--font-plex-mono), ui-monospace, "SF Mono", Menlo, monospace;
+}
+
+* {
+  border-color: var(--rule);
+}
+
+html {
+  background: var(--ink);
+  color-scheme: dark;
+}
+
+body {
+  background: var(--ink);
+  color: var(--paper);
+  font-family: var(--font-sans);
+  font-size: 14px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* ── display: ultralight serif, tight. Reads as print, not web UI. ──────── */
+.display {
+  font-family: var(--font-display);
+  font-weight: 300;
+  letter-spacing: -0.015em;
+  line-height: 0.95;
+}
+.display-italic {
+  font-family: var(--font-display);
+  font-weight: 300;
+  font-style: italic;
+  letter-spacing: -0.02em;
+  line-height: 0.95;
+}
+
+/* ── the credit-roll label: condensed, uppercase, wide-tracked ─────────── */
+.label {
+  font-family: var(--font-condensed);
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  color: var(--paper-faint);
+}
+
+/* Bracket-wrapped editorial labels — a Freshman borrow, used for section
+   markers so a heading never needs a rule and a background to be a heading. */
+.label-bracket::before { content: "[ "; color: var(--rule-strong); }
+.label-bracket::after  { content: " ]"; color: var(--rule-strong); }
+
+/* ── numbers, hashes, addresses ─────────────────────────────────────────── */
+.mono {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+}
+
+/* ── the stamp: status as a franked mark, not a pill ────────────────────── */
+.stamp {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4em;
+  font-family: var(--font-condensed);
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  padding: 3px 8px 2px;
+  border: 1px solid currentColor;
+  white-space: nowrap;
+}
+
+/* ── focus: visible, gold, never a browser default ──────────────────────── */
+:focus-visible {
+  outline: 1px solid var(--gold);
+  outline-offset: 2px;
+}
+
+/* ── scrollbars, so the console reads as one surface ────────────────────── */
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: var(--ink); }
+::-webkit-scrollbar-thumb { background: var(--rule); border: 3px solid var(--ink); }
+::-webkit-scrollbar-thumb:hover { background: var(--rule-strong); }
+
+/* ── the ticker spine ───────────────────────────────────────────────────── */
+@keyframes ticker-drift {
+  from { transform: translateX(0); }
+  to   { transform: translateX(-50%); }
+}
+.ticker-track {
+  display: inline-flex;
+  white-space: nowrap;
+  animation: ticker-drift 60s linear infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .ticker-track { animation: none; }
+}
+
+/* ── the pulse used ONLY while a transaction is genuinely in flight ─────── */
+@keyframes live-pulse {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: 0.35; }
+}
+.live { animation: live-pulse 1.4s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) {
+  .live { animation: none; }
+}
+
+/* ── rule-led sections: a hairline and a label, no card ─────────────────── */
+.sheet {
+  border-top: 1px solid var(--rule);
+}
+
+/* Inputs are wells in the canvas, not raised boxes. */
+input, textarea, select {
+  background: var(--ink-raise);
+  border: 1px solid var(--rule);
+  color: var(--paper);
+  font-family: var(--font-sans);
+  padding: 9px 11px;
+  width: 100%;
+}
+input:focus, textarea:focus, select:focus {
+  border-color: var(--gold);
+  outline: none;
+}
+input::placeholder, textarea::placeholder { color: var(--paper-faint); }
+input.mono, textarea.mono { font-family: var(--font-mono); }
+
+select {
+  appearance: none;
+  background-image: linear-gradient(45deg, transparent 50%, var(--paper-faint) 50%),
+                    linear-gradient(135deg, var(--paper-faint) 50%, transparent 50%);
+  background-position: calc(100% - 16px) 52%, calc(100% - 11px) 52%;
+  background-size: 5px 5px, 5px 5px;
+  background-repeat: no-repeat;
+}
+
+table { border-collapse: collapse; width: 100%; }

@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <title>TradeLayer</title>
+  <!-- The mark IS the evidence model: three strata of decreasing weight.
+         solid    = AUTHORITATIVE, retrieved by the contract
+         outlined = SUPPORTING, hash-anchored, filed by a party
+         dashed   = PARTY_CLAIM, an assertion that establishes nothing
+       The clipped top-right corner is the seal: once a case opens the stack
+       is frozen. Legible at 16px because the three weights stay distinct. -->
+  <rect width="64" height="64" fill="#08090a"/>
+  <g transform="translate(13 16)">
+    <path d="M0 0h27l7 7v5H0z" fill="#c9a227"/>
+    <rect x="0.9" y="14.9" width="33.2" height="9.2" fill="none" stroke="#c9a227" stroke-width="1.8"/>
+    <rect x="0.9" y="28.9" width="33.2" height="9.2" fill="none" stroke="#c9a227" stroke-width="1.8" stroke-dasharray="4 3.5" opacity="0.65"/>
+  </g>
+</svg>

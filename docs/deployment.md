@@ -171,6 +171,35 @@ Documentation drifts silently, and a README is the first thing a reader trusts.
 Two wrong transaction hashes shipped in a sibling project's write-up before a
 check like this existed.
 
+## 7d. Run the dApp
+
+```bash
+cd web && npm install && npm run dev
+```
+
+Then open http://localhost:3000. It reads the deployed contract with no
+configuration; to point it elsewhere, set either in `web/.env.local`:
+
+```
+NEXT_PUBLIC_CONTRACT_ADDRESS=0x…
+NEXT_PUBLIC_GENLAYER_RPC=https://studio.genlayer.com/api
+```
+
+**Bump the address BEFORE deploying the frontend anywhere.** A sibling project
+shipped a build whose env still carried the previous contract, so the live app
+served a stale deployment while every local check passed — the interface had no
+way to know it was reading the wrong contract, because reading the wrong
+contract works perfectly.
+
+```bash
+cd web && npm run build
+```
+
+Type-checks and builds all routes. The app needs `target: ES2020` in
+`web/tsconfig.json`: every wei quantity is handled as a `BigInt`, because
+parsing 10^18 into a Number loses precision and would silently misreport a
+balance. The scaffold defaults to ES2017, where BigInt literals do not compile.
+
 ## 8. Reading a failure
 
 A reverted GenLayer transaction is not obvious from the receipt's top level. The

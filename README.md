@@ -17,7 +17,7 @@ payout using remedies **both parties agreed before the goods shipped**.
 | Source | [`contracts/tradelayer.py`](contracts/tradelayer.py) — sha256 `e8b311385c7a85b865b685904d5f48e5bd4a91f9285c19139a31579f997f4078` |
 | On-chain schema | 27 methods — 10 view, 17 write, **1 payable** |
 | Tests | 193 direct · 27/27 critical guards mutation-checked |
-| Status | P0 complete — contract, suites, deployment and live proof. Frontend is P1. |
+| Status | P0 + P1 complete — contract, suites, live proof, and the browser dApp. |
 
 Deployed bytes were fetched back with `genlayer code` and compared to the
 source: **byte-identical**.
@@ -227,23 +227,66 @@ Detail: [`docs/escrow-security.md`](docs/escrow-security.md).
 
 ## 9. Wallet connection
 
-The contract is driven today by `genlayer-js` signers in `scripts/`, using two
-distinct StudioNet keys for the buyer and the seller. The browser dApp is P1 and
-not built yet; this section states what it will do rather than implying it
-exists.
+Injected **EIP-1193**, discovered via **EIP-6963** — so the connect dialog lists
+the wallets actually installed rather than a hardcoded roster of brands. Nothing
+is MetaMask-specific. No private key or seed phrase ever enters the app; the
+wallet signs, and the contract holds the escrow and decides every outcome.
 
-When it ships it must, at minimum:
+Every state the interface distinguishes: disconnected, connecting, connected,
+wrong network, switching, rejected signature, rejected transaction, pending,
+confirmed, failed. None of them is hidden.
 
-- reconcile the wallet's chain before every write — switch, then **re-read** the
-  chain id, because a wallet can report the old chain immediately after an
-  `wallet_switchEthereumChain` call;
-- surface a reverted transaction as reverted. On StudioNet the verdict lives at
-  `consensus_data.leader_receipt[0].execution_result === "ERROR"` with the
-  message at `.result.payload`. A frontend reading `txExecutionResultName` or
-  `messages[]` reports a rejected write as "Finalized on-chain", because those
-  fields are undefined and empty there;
-- poll a view predicate before declaring a write done, rather than trusting the
-  receipt alone.
+**Chain reconciliation.** After `wallet_switchEthereumChain` resolves, the app
+**re-reads `eth_chainId`** and retries for a moment before believing it. Several
+wallets resolve the switch before it has taken effect, and a write sent on the
+strength of the resolved promise fails with *"chainId should be same as current
+chainId"* — an error that points at the app and is not the app's fault. That
+exact bug took a sibling project's production app down.
+
+### The transaction lifecycle
+
+The write path is stated as it is, never optimistically:
+
+```
+Confirm in wallet → Submitted → Pending → GenLayer consensus
+                                              ↓
+                          Reconciling contract state → Finalized
+```
+
+Two rules it exists to enforce:
+
+1. **"Finalized" is never shown because a transaction was submitted.** A step
+   lights only once it has genuinely been reached.
+2. **A revert is never shown as a success.** GenLayer *finalizes reverts*, so a
+   finalized receipt is not a successful one — the leader receipt is
+   interrogated, and a rejection is rendered as a rejection with the contract's
+   own message.
+
+And a write is only "done" once a **view predicate** confirms contract state
+changed. The receipt waiter intermittently reports failure for a transaction
+that landed, so state is the authority, not the receipt.
+
+### Screens
+
+| Route | What it is |
+|---|---|
+| `/` | Landing — the thesis, and live protocol totals |
+| `/register` | Every trade on the deployment, filterable, with escrow in custody |
+| `/create` | The agreement builder, including the remedy table |
+| `/trade/[id]` | The trade room: agreement, remedies, evidence, dispute, adjudication, verdict, settlement, and the actions available to you |
+| `/passport/[address]` | Protocol history for an account — counters, deliberately no score |
+| `/protocol` | The rules of the venue, every value read live from `get_config` |
+
+**Nothing is fabricated.** There are no invented validator counts, no mocked
+volume and no placeholder trades — every figure on every screen is a contract
+read. Where a value does not exist on chain, the interface says so.
+
+**Actions are explained, not hidden.** An action you cannot take is shown with
+the reason (`"Only the buyer may open a dispute"`, `"The appeal window has
+closed"`), so the interface teaches the protocol instead of concealing it. That
+gating is UX only — the contract re-checks everything against its own consensus
+clock, and a stale page produces a correctly rejected transaction rather than a
+wrong outcome.
 
 ## 10. Local setup
 
@@ -441,13 +484,16 @@ Stated plainly, because a review that only lists strengths is marketing.
    settlement emits nothing; they do not model a callback the mechanism does not
    provide.
 
-7. **No frontend yet.** P0 is contract, suites, deployment and live proof.
+7. **The dApp reads a single page of trades.** `list_trades` is paged at 50 per
+   call and the register reads the first page only. A deployment with more
+   trades than that needs pagination in the interface — the contract already
+   supports it.
 
 ## 15. Roadmap
 
 | | |
 |---|---|
-| P1 | Browser dApp: create, fund, ship, file evidence, dispute, adjudicate, settle, with an honest transaction lifecycle |
+| ~~P1~~ | ~~Browser dApp~~ — **done**. See §9. |
 | P2 | Real carrier and customs endpoints, replacing the demo registry, with per-source reachability probes on-chain |
 | P3 | Document retrieval — fetch the storage reference and verify `document_hash` against the bytes, upgrading `SUPPORTING` from anchored to verified |
 | P4 | Multi-shipment trades and partial delivery against a single agreement |
@@ -458,6 +504,10 @@ Stated plainly, because a review that only lists strengths is marketing.
 ```
 contracts/tradelayer.py            the Intelligent Contract
 registry/                          demo carrier records the contract binds
+web/                               the browser dApp (Next.js, TypeScript, Tailwind)
+web/src/lib/wallet.tsx             injected EIP-1193 + EIP-6963, chain reconciliation
+web/src/lib/useTx.ts               the honest write lifecycle
+web/src/lib/actions.ts             what each party may do, and why not
 tests/direct/                      193 tests, fully mocked
 tests/integration/                 invariant tests against a live deployment
 scripts/deploy.ts                  deploy + write deploy/deployment.json

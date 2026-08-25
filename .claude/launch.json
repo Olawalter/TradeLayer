@@ -1,0 +1,18 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "tradelayer-web",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": [
+        "run",
+        "dev",
+        "--",
+        "-p",
+        "3060"
+      ],
+      "cwd": "C:/Users/Pc/Desktop/TradeLayer/web",
+      "port": 3060
+    }
+  ]
+}
