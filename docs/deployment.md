@@ -200,6 +200,29 @@ Type-checks and builds all routes. The app needs `target: ES2020` in
 parsing 10^18 into a Number loses precision and would silently misreport a
 balance. The scaffold defaults to ES2017, where BigInt literals do not compile.
 
+## 7e. Prove the dApp's write path
+
+```bash
+npm run prove-write-path
+```
+
+Drives `web/src/lib/write.ts` — the module the browser actually runs — with a
+local account instead of an injected wallet, against the live contract. It
+proves a successful write reports its phases in order and reaches `finalized`
+only once contract state changed, that a REVERTED transaction is reported as
+reverted rather than finalized, and that the interface's action gating agrees
+with what the contract accepts at each step.
+
+It does NOT prove wallet discovery or chain switching. Those need a browser
+wallet.
+
+```bash
+cd web && npm test
+```
+
+30 unit tests over the pure logic: wei formatting at full BigInt precision, and
+the action-gating table exhaustively, with no network at all.
+
 ## 8. Reading a failure
 
 A reverted GenLayer transaction is not obvious from the receipt's top level. The

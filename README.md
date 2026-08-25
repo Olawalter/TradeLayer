@@ -16,7 +16,7 @@ payout using remedies **both parties agreed before the goods shipped**.
 | Deploy tx | `0x8f59fb9487fb5a94b7782cc976b141ea9eb4b58779806e041b36d51f9371ae25` |
 | Source | [`contracts/tradelayer.py`](contracts/tradelayer.py) — sha256 `e8b311385c7a85b865b685904d5f48e5bd4a91f9285c19139a31579f997f4078` |
 | On-chain schema | 27 methods — 10 view, 17 write, **1 payable** |
-| Tests | 193 direct · 27/27 critical guards mutation-checked |
+| Tests | 193 direct · 30 web unit · 21 live write-path checks · 27/27 critical guards mutation-checked |
 | Status | P0 + P1 complete — contract, suites, live proof, and the browser dApp. |
 
 Deployed bytes were fetched back with `genlayer code` and compared to the
@@ -276,6 +276,44 @@ that landed, so state is the authority, not the receipt.
 | `/trade/[id]` | The trade room: agreement, remedies, evidence, dispute, adjudication, verdict, settlement, and the actions available to you |
 | `/passport/[address]` | Protocol history for an account — counters, deliberately no score |
 | `/protocol` | The rules of the venue, every value read live from `get_config` |
+
+### How the interface is proven
+
+The write path is not left to a hand-wave. `web/src/lib/write.ts` has no React
+in it — `useTx` is a thin wrapper — so the same module the browser runs can be
+driven headlessly against the live contract:
+
+```bash
+npm run prove-write-path
+```
+
+21 checks against a real trade, including the one that matters most:
+
+```
+4 — a REVERTED transaction is reported as reverted, never as finalized
+  PASS  it was classified as 'reverted', not 'error' or 'finalized'
+  PASS  'finalized' never appeared in the phase sequence
+        awaiting-wallet › submitted › pending › consensus › reverted
+  PASS  the contract's own message was surfaced
+        trade is no longer awaiting acceptance
+```
+
+It also checks the interface's action gating against what the contract will
+actually accept, at each step. When the UI says *"the seller cannot self-certify
+it early"*, the harness sends the transaction anyway and confirms the contract
+rejects it with the same reason.
+
+```bash
+cd web && npm test
+```
+
+30 unit tests over the pure logic — wei formatting at full BigInt precision, and
+the gating table exhaustively, without spending a request on a rate-limited
+endpoint.
+
+**Not proven, and not claimed:** EIP-6963 wallet discovery and
+`wallet_switchEthereumChain` reconciliation. Those need a browser wallet, and
+this build has never had one attached.
 
 **Nothing is fabricated.** There are no invented validator counts, no mocked
 volume and no placeholder trades — every figure on every screen is a contract

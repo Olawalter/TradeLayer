@@ -32,7 +32,7 @@ CONTRACT_FILE = "contracts/tradelayer.py"
 GEN = 10 ** 18
 BEACON_GENESIS = 1606824023
 
-# A fixed "now" for reproducibility: 2026-08-20T12:00:00Z.
+# A fixed "now" for reproducibility: 2026-08-21T12:00:00Z.
 T0 = 1787313600
 
 CDN_HOSTS = ("cloudflare.com", "www.digitalocean.com", "medium.com")

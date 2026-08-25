@@ -38,17 +38,19 @@ export async function read<T>(functionName: string, args: unknown[] = []): Promi
 }
 
 /**
- * A signer bound to the connected injected wallet.
+ * A signer.
  *
- * Both `account` and `provider` are passed: the address identifies the signer,
- * the provider is what actually signs. No private key ever enters this app.
+ * In the browser `account` is the connected ADDRESS and `provider` is the
+ * injected wallet that actually signs — no private key ever enters this app.
+ * A headless harness passes a full local account and no provider, so the same
+ * pipeline can be driven against the live contract in a test.
  */
-export function writeClient(account: `0x${string}`, provider: unknown) {
+export function writeClient(account: unknown, provider?: unknown) {
   return createClient({
     chain: studionet,
     endpoint: RPC_URL,
     account,
-    provider,
+    ...(provider ? { provider } : {}),
   } as never);
 }
 

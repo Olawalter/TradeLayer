@@ -8,8 +8,9 @@
     "deploy": "tsx scripts/deploy.ts",
     "probe": "tsx scripts/probe_carrier.ts",
     "lifecycle": "tsx scripts/live_lifecycle.ts",
-    "typecheck": "tsc -p tsconfig.json",
-    "verify": "python scripts/verify_claims.py"
+    "prove-write-path": "tsx scripts/prove_write_path.ts",
+    "verify": "python scripts/verify_claims.py",
+    "typecheck": "tsc -p tsconfig.json"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",
