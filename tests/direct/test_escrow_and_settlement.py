@@ -478,3 +478,108 @@ class TestTheSellerCannotSelfCertifyDelivery:
         with desk.vm.expect_revert("not awaiting a dispute"):
             desk.c.close_undisputed(tid)
         assert transfers == []
+
+
+class TestValueIsEmittedOnlyAfterTheLedgerIsZeroed:
+    """The README and the security review both claim the suite asserts the
+    state-before-transfer ordering. Until this class existed they were
+    overclaiming: reordering `settle` to emit BEFORE zeroing the ledger left
+    the whole suite green, because the transfers fixture records only
+    {to, value} and never samples storage at emit time.
+
+    A documented invariant nothing can falsify is a comment, not a guarantee.
+    """
+
+    def _observe_ledger_at_emit(self, desk, tid):
+        seen = []
+
+        def hook(vm, request):
+            for op in ("EthSend", "PostMessage"):
+                if op in request:
+                    # Read contract storage AT THE INSTANT the transfer is
+                    # emitted — the only moment at which ordering is visible.
+                    seen.append(int(desk.c.trades[tid].deposited_amount))
+                    return {"ok": None}
+            return None
+
+        desk.vm._gl_call_hook = hook
+        return seen
+
+    def test_settle_zeroes_the_ledger_before_emitting(self, desk):
+        tid = desk.adjudicated_trade()
+        desk.past_appeal(tid)
+        desk.finalize(tid)
+        desk.past_settlement(tid)
+        seen = self._observe_ledger_at_emit(desk, tid)
+        desk.settle(tid)
+        assert seen, "settle emitted no transfer at all"
+        assert all(v == 0 for v in seen), (
+            f"value was emitted while the ledger still held {seen}"
+        )
+
+    def test_a_partial_settlement_zeroes_before_either_leg(self, desk):
+        """Two transfers, so the invariant has to hold across both."""
+        tid = desk.adjudicated_trade({"PRODUCT_MODEL": BREACH, "QUANTITY": CONFORMING,
+                                      "QUALITY_GRADE": CONFORMING,
+                                      "SHIPPING_DEADLINE": CONFORMING})
+        desk.past_appeal(tid)
+        desk.finalize(tid)
+        desk.past_settlement(tid)
+        seen = self._observe_ledger_at_emit(desk, tid)
+        desk.settle(tid)
+        assert len(seen) == 2, f"expected both legs, saw {len(seen)}"
+        assert all(v == 0 for v in seen)
+
+    def test_recovery_zeroes_the_ledger_before_emitting(self, desk):
+        tid = desk.disputed_trade()
+        desk.past_recovery(tid)
+        seen = self._observe_ledger_at_emit(desk, tid)
+        desk.vm.sender = desk.buyer
+        desk.c.claim_timeout_refund(tid)
+        assert seen and all(v == 0 for v in seen)
+
+
+class TestTheSellerCannotRevokeAVestedRecoveryRight:
+    """While a trade is only `shipped`, the timeout refund is the buyer's ONLY
+    remedy — `open_dispute` requires `delivered`. Recording delivery recomputes
+    `recovery_deadline` from that instant, so a seller who sits on a shipped
+    trade and records delivery one second before the buyer can recover would
+    push the deadline out again, and could keep doing it.
+    """
+
+    def test_the_seller_cannot_record_delivery_after_recovery_has_vested(self, desk):
+        tid = desk.funded_trade()
+        desk.ship(tid)
+        desk.past_recovery(tid)
+        desk.vm.sender = desk.seller
+        with desk.vm.expect_revert("recovery deadline has passed"):
+            desk.c.mark_delivered(tid)
+
+    def test_the_vested_refund_survives_and_pays(self, desk, transfers):
+        tid = desk.funded_trade()
+        desk.ship(tid)
+        desk.past_recovery(tid)
+        desk.vm.sender = desk.buyer
+        desk.c.claim_timeout_refund(tid)
+        assert [x["to"] for x in transfers] == [desk.buyer_hex]
+        assert transfers[0]["value"] == TRADE_VALUE
+
+    def test_the_seller_may_still_record_delivery_in_the_ordinary_window(self, desk):
+        """The guard must not break the normal late-but-legitimate delivery."""
+        tid = desk.funded_trade()
+        desk.ship(tid)
+        desk.w.set_now(int(desk.trade(tid)["delivery_deadline"]) + 3600)
+        desk.vm.sender = desk.seller
+        desk.c.mark_delivered(tid)
+        assert desk.trade(tid)["status"] == "delivered"
+
+    def test_the_buyer_is_never_blocked_by_either_bound(self, desk):
+        """Both bounds are on the SELLER. The buyer may record delivery at any
+        time, including after their own recovery right has vested — giving it
+        up is their choice to make."""
+        tid = desk.funded_trade()
+        desk.ship(tid)
+        desk.past_recovery(tid)
+        desk.vm.sender = desk.buyer
+        desk.c.mark_delivered(tid)
+        assert desk.trade(tid)["status"] == "delivered"

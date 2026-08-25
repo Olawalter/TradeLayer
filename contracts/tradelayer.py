@@ -770,6 +770,16 @@ class TradeLayer(gl.Contract):
         _require(who == t.buyer or now >= int(t.delivery_deadline),
                  "[EXPECTED] before the agreed delivery deadline, only the buyer may "
                  "record delivery — the seller cannot self-certify it early")
+        # And not after the buyer's recovery right has VESTED. Recording
+        # delivery recomputes `recovery_deadline` from this instant, so without
+        # this the seller can sit on a shipped trade until the buyer is one
+        # second from recovering, then record delivery and push the deadline
+        # out again — revoking a right the buyer already held, repeatedly.
+        # While a trade is merely `shipped` the timeout refund is the buyer's
+        # only remedy: `open_dispute` requires `delivered`.
+        _require(who == t.buyer or now <= int(t.recovery_deadline),
+                 "[EXPECTED] the buyer's recovery deadline has passed — the seller "
+                 "can no longer record delivery on this trade")
         disp_deadline = now + int(t.dispute_window)
         res_window = int(t.resolution_window)
 

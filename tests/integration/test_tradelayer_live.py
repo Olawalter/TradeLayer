@@ -25,7 +25,7 @@ import pytest
 CONTRACT_SOURCE = pathlib.Path("contracts/tradelayer.py")
 
 DEPLOYED = os.environ.get(
-    "TRADELAYER_ADDRESS", "0x699fff65298c7ba2797DF236E5eB1C0DDB3c3A0F")
+    "TRADELAYER_ADDRESS", "0xE9b6e3FC11EbbB1adA32219CEBF43c9d4a3113e5")
 RPC_URL = os.environ.get("GENLAYER_RPC", "https://studio.genlayer.com/api")
 
 VALID_STATUSES = {

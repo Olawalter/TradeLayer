@@ -12,11 +12,11 @@ payout using remedies **both parties agreed before the goods shipped**.
 | | |
 |---|---|
 | Network | GenLayer StudioNet (chain id `61999`) |
-| Contract | `0x699fff65298c7ba2797DF236E5eB1C0DDB3c3A0F` |
-| Deploy tx | `0x6dc4242624cac477973d8998d9b773ec063e9bb34f43163db6abf361ff4f871c` |
-| Source | [`contracts/tradelayer.py`](contracts/tradelayer.py) — sha256 `c0cb2abec6c89c4c7090bc15f4deac9f380e222005cc424ad228c4d5197c615c` |
+| Contract | `0xE9b6e3FC11EbbB1adA32219CEBF43c9d4a3113e5` |
+| Deploy tx | `0x8f59fb9487fb5a94b7782cc976b141ea9eb4b58779806e041b36d51f9371ae25` |
+| Source | [`contracts/tradelayer.py`](contracts/tradelayer.py) — sha256 `e8b311385c7a85b865b685904d5f48e5bd4a91f9285c19139a31579f997f4078` |
 | On-chain schema | 27 methods — 10 view, 17 write, **1 payable** |
-| Tests | 186 direct · 25/25 critical guards mutation-checked |
+| Tests | 193 direct · 27/27 critical guards mutation-checked |
 | Status | P0 complete — contract, suites, deployment and live proof. Frontend is P1. |
 
 Deployed bytes were fetched back with `genlayer code` and compared to the
@@ -260,7 +260,7 @@ Then create `.env` (git-ignored):
 ```
 BUYER_PK=0x<studionet key>
 SELLER_PK=0x<a different studionet key>
-TRADELAYER_ADDRESS=0x699fff65298c7ba2797DF236E5eB1C0DDB3c3A0F
+TRADELAYER_ADDRESS=0xE9b6e3FC11EbbB1adA32219CEBF43c9d4a3113e5
 ```
 
 ## 11. Testing
@@ -269,7 +269,7 @@ TRADELAYER_ADDRESS=0x699fff65298c7ba2797DF236E5eB1C0DDB3c3A0F
 python -m pytest tests/direct -q
 ```
 
-**186 tests**, no network and no model calls — every nondeterministic source is
+**193 tests**, no network and no model calls — every nondeterministic source is
 mocked in `tests/direct/conftest.py`.
 
 | Suite | Covers |
@@ -330,37 +330,37 @@ instructions, including how to read a reverted transaction: [`docs/deployment.md
 ## 13. Verified end to end
 
 Every row below is a transaction against
-`0x699fff65298c7ba2797DF236E5eB1C0DDB3c3A0F` on StudioNet, from one run of
-`npm run lifecycle`. Trade `TL-1001`, 0.5 GEN of real escrow, **0 failures**.
+`0xE9b6e3FC11EbbB1adA32219CEBF43c9d4a3113e5` on StudioNet, from one run of
+`npm run lifecycle`. Trade `TL-1000`, 0.5 GEN of real escrow, **0 failures**.
 
 | Step | Transaction | Outcome |
 |---|---|---|
-| create_trade | `0xb178f0083910fc86f896539e167c5a123e112d634bbbf786ab788d4a2ab87456` | accepted |
-| accept_trade | `0x88cebc7a08ca3c0188f1357a6e6e0ad8ee9266d8536f3ecb4377ca24f2ae5f05` | accepted |
-| fund_trade 0.5 GEN | `0xf3e8267218732235ad857127e43ebe3f11e6c6f2cc19dd4e1cee73bd7a269914` | accepted |
-| underfund attempt | `0x9060d4637264ffc77e7c0b63e3df925710809f3a042b3b37612b8fb6129118e5` | **rejected** — this trade is already funded |
-| mark_shipped | `0xd8a39d2831c5bdcab18cd52c974b76e76216bc76705a3e7036a0a0868132a6b3` | accepted |
-| seller self-certifies delivery early | `0x402c87023e094fdfea31254dd502ba0f82056575bd18fb950ca11d212c8836db` | **rejected** — before the agreed delivery deadline, only the buyer may record delivery — the… |
-| buyer records delivery | `0x2cae89ee27a3d79b9a7b421cc4bdb895b166147ca32985f44e2dd2fbc0d1ade7` | accepted |
-| seller files inspection report | `0x1d7e0f82abe571f41dcffe687c38bd36d6ae40565084a31c2bbb5fc4a416be21` | accepted |
-| buyer files a statement | `0x36b9ef05b3a8fc8027dfbbbba09e29c3a0a7eb6ba86bd2ce1a1f53c4d44bc008` | accepted |
-| seller self-declares AUTHORITATIVE | `0xb5aebbb8f4e172a7573a2c05008a4f4e3cd302164bd65db4c212e7b2716d4fad` | **rejected** — parties may file SUPPORTING or PARTY_CLAIM evidence; AUTHORITATIVE records… |
-| open_dispute | `0xc3cbb3554c258c46f46e910781b8208612f200e88d62a8faf950cbae3bf4f94f` | accepted |
-| respond_to_dispute | `0x46da71152ef66be6c537f76b1c3f5701e04cc011649ec2249666ae18f09e32b3` | accepted |
-| begin_adjudication | `0x53b68fb7dad0ceddf0751a0be84cb421f11430cdc86d10bd76d232b2e2e9f886` | accepted |
-| file evidence while frozen | `0xa9c3ca6d2a231f41195371b2fe17d9d0e68ed1b50283db4d966f15a7fdc79f0f` | **rejected** — the evidence package is frozen: evidence is not accepted in the current trade… |
-| adjudicate | `0xc06963b67b8f1b825378c066227f767be9bef10f1d83ebf2433db43890309f9f` | accepted |
-| finalize during appeal window | `0xa1f814ade5ae6816cfc0d98f86436f7cc5932704ed68888e2f0da14332c2466a` | **rejected** — the appeal window is still open |
-| finalize | `0x2c6cc881c2d25a5902103e3eb50615502a53067ac12c6285552db5a69ac6bb61` | accepted |
-| settle before the delay elapses | `0x24def828c5c15f5a8a383f0a9ed171dba5c269cd4041580876fc1718fc35b027` | **rejected** — the settlement window is still arming; settlement unlocks shortly after… |
-| settle | `0x32b5702204862a28e4b6217de73e043520b5aacda025997b8a6787b7a9211d0e` | accepted |
-| second settle | `0x7a5d3f37cb626cbf00a613ce374ffa2f79447d0ed0afee6fab5f273238beb46d` | **rejected** — this trade has no finalized verdict to settle |
+| create_trade | `0x5bee22db2a92afca853fd7f17d5ac250452a8434bc36d01c44bc5dafe8032061` | accepted |
+| accept_trade | `0xe887af59e09470b7584fb6cb16193d92554a9ecc37a565073dd0cb85581fadcd` | accepted |
+| fund_trade 0.5 GEN | `0x3f7ef91a5185bc89855fdf4ee470b6b562e446fe526e209a714238cdc5d4c3aa` | accepted |
+| underfund attempt | `0xa1f7789b58b6c4cebe30c9c4a60e917b14c6f78498111274ab717d875b82e8dc` | **rejected** — this trade is already funded |
+| mark_shipped | `0x3e4557f65b704952bc32997ef83db49257dc6077222979bd7fbbe3a1eae197ec` | accepted |
+| seller self-certifies delivery early | `0xd0a56772b0a4f70dfd4ad1743493a2884e99648731aa8ce17c6a22077600e8a2` | **rejected** — before the agreed delivery deadline, only the buyer may record delivery — the… |
+| buyer records delivery | `0x4804a77276f0ac0304af108a363abb0b85db278f3bdf8a2b562146470600fdff` | accepted |
+| seller files inspection report | `0x91a68689c4a510ba8ce1399dd723a1983bcf6e17c62825bf23697f8ffa192989` | accepted |
+| buyer files a statement | `0x0110297709fa42b2967a9a7221a3bb71faf780036f3bb9e56be8788a43df0392` | accepted |
+| seller self-declares AUTHORITATIVE | `0x8495c454bd036bb775e8b133b82f8c09396c3f3720ca58f4aaf91aa73a498564` | **rejected** — parties may file SUPPORTING or PARTY_CLAIM evidence; AUTHORITATIVE records… |
+| open_dispute | `0x1fbb92a093a4b98cf5b511d20f317c6f7e48f047b03ef2e57fa9855d335dd361` | accepted |
+| respond_to_dispute | `0xcb5dbafd050ef7b591f29aab98a6744f22b1486cba8db93800aa7c193596e277` | accepted |
+| begin_adjudication | `0x8b3ee7cda0bbd5af01bc675695ec0db09f4d80271f9f2b69568de93003e791eb` | accepted |
+| file evidence while frozen | `0x9522352613b484b29ec048b53715d1aab86ceb79e687922fd7d30e0d4234a5c0` | **rejected** — the evidence package is frozen: evidence is not accepted in the current trade… |
+| adjudicate | `0x88ffeed0c5c4c646d240f188f95c1d41762747750b898c13342046fef0af2b8b` | accepted |
+| finalize during appeal window | `0xfffee09383cab6325247972a84fd1efe049cfe5b81168446f3821b6ef7e1c2ee` | **rejected** — the appeal window is still open |
+| finalize | `0x0ac842e886c97c1e6b1c6021aef3938de98385161e6f4f235bc07aa481ad8454` | accepted |
+| settle before the delay elapses | `0x35f72454e9e90260e9b897696cba2187083c3e8fb4fdab9c2bfaf7eb9866f793` | **rejected** — the settlement window is still arming; settlement unlocks shortly after… |
+| settle | `0x49894d3a5bb1931ca95745a1c7c14dd5bb4bd63a073d99a6fce9edfc43fc0c26` | accepted |
+| second settle | `0xccf3c51c311ddf2050df5ebd3754badf3703d40b6af886db25eaf07e52dbc81f` | **rejected** — this trade has no finalized verdict to settle |
 
 Wallet deltas, not just contract state:
 
 ```
-seller 211720000000000000000 -> 212220000000000000000   (delta +500000000000000000)
-buyer  212519999999999999900 -> 212519999999999999900   (delta 0)
+buyer  211769999999999999900 -> 211769999999999999900
+seller 212220000000000000000 -> 212720000000000000000
 ```
 
 The two payouts reconstitute the escrow exactly. Full transcript in
@@ -379,7 +379,7 @@ issues — so the derived payout was 0 bps and the seller kept the escrow. That 
 the burden of proof working, not the system failing to decide.
 
 An on-chain probe (`npm run probe`, tx
-`0xbe42203296b954fa205ae08468d3c1114f6fe5b9a9e6ea150d3b8ad9b052ecdb`) confirms
+`0x7c38ab27a1ef92f15d446400b64d5bd36e5d15f2ebb04d6a84c2dea8ad58c1ce`) confirms
 why, and confirms it fails in the right direction:
 
 ```
@@ -458,7 +458,7 @@ Stated plainly, because a review that only lists strengths is marketing.
 ```
 contracts/tradelayer.py            the Intelligent Contract
 registry/                          demo carrier records the contract binds
-tests/direct/                      186 tests, fully mocked
+tests/direct/                      193 tests, fully mocked
 tests/integration/                 invariant tests against a live deployment
 scripts/deploy.ts                  deploy + write deploy/deployment.json
 scripts/live_lifecycle.ts          the end-to-end on-chain proof

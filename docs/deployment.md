@@ -12,11 +12,11 @@ the live proof.
 | Network | GenLayer StudioNet |
 | Chain id | `61999` |
 | RPC | `https://studio.genlayer.com/api` |
-| Contract | `0x699fff65298c7ba2797DF236E5eB1C0DDB3c3A0F` |
-| Deploy tx | `0x6dc4242624cac477973d8998d9b773ec063e9bb34f43163db6abf361ff4f871c` |
+| Contract | `0xE9b6e3FC11EbbB1adA32219CEBF43c9d4a3113e5` |
+| Deploy tx | `0x8f59fb9487fb5a94b7782cc976b141ea9eb4b58779806e041b36d51f9371ae25` |
 | Source | `contracts/tradelayer.py` |
 | Runner | `py-genlayer:1jb45aa8ynh2a9c9xn3b7qqh8sm5q93hwfp7jqmwsfhh8jpz09h6` |
-| Explorer | https://explorer-studio.genlayer.com/address/0x699fff65298c7ba2797DF236E5eB1C0DDB3c3A0F |
+| Explorer | https://explorer-studio.genlayer.com/address/0xE9b6e3FC11EbbB1adA32219CEBF43c9d4a3113e5 |
 
 The artifact is written to `deploy/deployment.json` by the deploy script; it is
 the machine-readable copy of the table above.
@@ -42,7 +42,7 @@ Create `.env` in the project root. It is git-ignored and must stay that way.
 ```
 BUYER_PK=0x<studionet private key>
 SELLER_PK=0x<a different studionet private key>
-TRADELAYER_ADDRESS=0x699fff65298c7ba2797DF236E5eB1C0DDB3c3A0F
+TRADELAYER_ADDRESS=0xE9b6e3FC11EbbB1adA32219CEBF43c9d4a3113e5
 ```
 
 Both keys need StudioNet GEN. The buyer key funds escrow and pays for most
@@ -83,7 +83,7 @@ The first line of the contract is a runner pin:
 python -m pytest tests/direct -q
 ```
 
-186 tests, no network and no model calls — every nondeterministic source is
+193 tests, no network and no model calls — every nondeterministic source is
 mocked by the `World` fixture in `tests/direct/conftest.py`. Expect roughly 40
 seconds.
 

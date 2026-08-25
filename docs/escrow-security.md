@@ -1,8 +1,8 @@
 # TradeLayer — Escrow Security Review
 
 Scope: `contracts/tradelayer.py` as deployed at
-`0x699fff65298c7ba2797DF236E5eB1C0DDB3c3A0F` (GenLayer StudioNet), source
-sha256 `c0cb2abec6c89c4c7090bc15f4deac9f380e222005cc424ad228c4d5197c615c` —
+`0xE9b6e3FC11EbbB1adA32219CEBF43c9d4a3113e5` (GenLayer StudioNet), source
+sha256 `e8b311385c7a85b865b685904d5f48e5bd4a91f9285c19139a31579f997f4078` —
 fetched back with `genlayer code` and confirmed byte-identical.
 
 Every path by which value enters or leaves the contract, checked against the
@@ -148,6 +148,7 @@ the seller kept the entire escrow.
 | Buyer waits out the clock after losing | Recovery settles the **recorded verdict**, not a full refund |
 | Buyer recovers a trade they never disputed | Refused: the closed dispute window is itself the answer, and `close_undisputed` is permissionless |
 | Seller self-certifies delivery at ship time | Refused: before the agreed delivery deadline only the buyer may record delivery. Otherwise the dispute window expires while the cargo is at sea |
+| Seller revokes a vested recovery right | Refused: the seller cannot record delivery once `recovery_deadline` has passed. Recording delivery recomputes that deadline, and while a trade is only `shipped` the timeout refund is the buyer's sole remedy — `open_dispute` requires `delivered` |
 
 ---
 
@@ -194,7 +195,7 @@ See the "Verified end to end" block in the README for the transaction table from
 the deployed contract, including the balance deltas on both sides and the
 rejected second settlement.
 
-Direct suite: **186 tests**. `genvm_linter` check: clean. Twenty-five critical
+Direct suite: **193 tests**. `genvm_linter` check: clean. Twenty-seven critical
 guards were mutation-checked — each broken in a scratch copy to confirm the
 suite fails, against a clean accept-control run:
 
@@ -225,8 +226,10 @@ suite fails, against a clean accept-control run:
 | M23 | An undisputed delivered trade cannot be recovered | yes |
 | M24 | The seller cannot self-certify delivery early | yes |
 | M25 | Evidence description defused into the prompt | yes |
+| M26 | The seller cannot record delivery after recovery vests | yes |
+| M27 | `settle` zeroes the ledger **before** emitting (pure reorder) | yes |
 
-Four were only detected after the suite was strengthened, and each taught
+Five were only detected after the suite was strengthened, and each taught
 something:
 
 - **M4** missed because the explicit `status != ADJUDICATING` guard was dead
@@ -246,6 +249,13 @@ something:
   sanitiser deleted. The test now keys its mock on the *defused* text. A
   security test that asserts a consequence the rest of the system already
   guarantees will pass whether or not the defence exists.
+
+- **M27** is a *reorder*, not a deletion: move both `_send_gen` calls ahead of
+  the ledger zeroing, same recipients and same amounts. The suite passed. The
+  `transfers` fixture records only `{to, value}`, so ordering was structurally
+  invisible to it — while this document and the README both claimed the suite
+  asserted it. A test now installs a hook that reads `deposited_amount` **at the
+  instant the transfer is emitted**, which is the only moment ordering exists.
 
 M14 was not a hardening exercise. It closes a real hole found during review:
 `document_hash` accepted arbitrary multi-line text for `PARTY_CLAIM` and was
