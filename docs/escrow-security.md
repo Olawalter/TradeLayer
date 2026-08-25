@@ -1,8 +1,8 @@
 # TradeLayer — Escrow Security Review
 
 Scope: `contracts/tradelayer.py` as deployed at
-`0xB9526c7Aaefd3a81C056Df1102EcBF5Ca610CCA4` (GenLayer StudioNet), source
-sha256 `ab619308efd4f80832fc869dbe0d53c4109db2955dd205377301baf455e7a77f` —
+`0x699fff65298c7ba2797DF236E5eB1C0DDB3c3A0F` (GenLayer StudioNet), source
+sha256 `c0cb2abec6c89c4c7090bc15f4deac9f380e222005cc424ad228c4d5197c615c` —
 fetched back with `genlayer code` and confirmed byte-identical.
 
 Every path by which value enters or leaves the contract, checked against the
@@ -47,7 +47,8 @@ One emission function, `_send_gen`, and every exit calls it.
 | 2 | Buyer wins | `settle` | buyer | whole ledger (`payout_bps == 10000`) |
 | 3 | Partial | `settle` | both | ledger split by derived bps |
 | 4 | Undisputed | `close_undisputed` → `settle` | seller | whole ledger |
-| 5 | Timeout recovery | `claim_timeout_refund` | buyer | whole ledger |
+| 5 | Timeout recovery, nothing decided | `claim_timeout_refund` | buyer | whole ledger |
+| 6 | Timeout recovery, verdict on record | `claim_timeout_refund` | both | ledger split by the recorded bps |
 
 Cancellation moves no value: it is only reachable while `deposited_amount == 0`.
 
@@ -74,11 +75,11 @@ deltas on both sides.
 | Property | `settle` | `claim_timeout_refund` |
 |---|---|---|
 | Recipient correct | `t.buyer` / `t.seller` from storage | sender, asserted to be the buyer |
-| Amount from contract storage | `_split()` over `deposited_amount` | `deposited_amount` |
+| Amount from contract storage | `_split()` over `deposited_amount` | `_split()` if a verdict exists, else `deposited_amount` |
 | Amount > 0 | asserted (`held > 0`) | asserted |
-| Bounded | `payout_bps ≤ 10000` by construction | whole ledger |
+| Bounded | `payout_bps ≤ 10000` by construction | same bound; the two parts sum to the deposit |
 | Authorization | permissionless by design | buyer only |
-| Lifecycle state | must be `finalized` | must be pre-terminal |
+| Lifecycle state | must be `finalized` | pre-terminal, and not a delivered trade nobody disputed |
 | Finality gate | `now >= settlement_unlock` | `now > recovery_deadline` |
 | State updated before transfer | ledger zeroed, amounts recorded, status set | same |
 | State persisted before transfer | `self.trades[id] = t` precedes `_send_gen` | same |
@@ -133,13 +134,20 @@ the seller kept the entire escrow.
 | Panel returns partial findings | Rejected — a verdict must answer every agreed issue |
 | Panel returns malformed JSON | Fails closed; nothing is decided, case stays open |
 | Prompt injection in a document or claim | Fence delimiters defused; prompt names the text as untrusted data |
+| Forged `[AUTHORITATIVE]` row via the hash field | Refused at the boundary: a party hash must be empty or a real digest; the prompt defuses it again |
+| Fence or overlong text via the carrier reference | Capped at 64 chars at shipment; defused into the prompt. `_norm_ref` already strips every whitespace character, so no new line can be forged |
 | Silent seller stalls the case forever | Adjudication opens once the response window closes |
 | Silent seller runs out the resolution window | Creation refuses a resolution window shorter than the response window + slack |
 | Adjudication after the resolution deadline | Refused; the trade falls to recovery |
 | Settlement before finality | Refused until `finalized_at + 300s` |
 | Clock skewed forward to close a window early | Beacon-head ceiling from unrelated infrastructure refuses it |
 | Block-explorer lag freezes the contract | The chain timestamp is a one-directional floor; lag tolerated without bound |
-| Funds stranded in a stalled trade | Buyer recovers after the recovery deadline, from any pre-terminal state |
+| Funds stranded in a stalled trade | Buyer recovers after the recovery deadline, from any state before a verdict is final |
+| Losing party appeals at the edge of the resolution window | Refused: an appeal must leave `MIN_ADJUDICATION_TIME` to be heard, and the appeal window is clamped so it can never outlive that point. Without this, a stranded trade paid the buyer 100% — making an adverse verdict appealable by attrition |
+| Three panel failures exhaust the case | A round that decided nothing is not charged. Evidence is a party's to write before the freeze, so text that reliably breaks a structured reply would otherwise be a way to buy the whole escrow |
+| Buyer waits out the clock after losing | Recovery settles the **recorded verdict**, not a full refund |
+| Buyer recovers a trade they never disputed | Refused: the closed dispute window is itself the answer, and `close_undisputed` is permissionless |
+| Seller self-certifies delivery at ship time | Refused: before the agreed delivery deadline only the buyer may record delivery. Otherwise the dispute window expires while the cargo is at sea |
 
 ---
 
@@ -186,7 +194,7 @@ See the "Verified end to end" block in the README for the transaction table from
 the deployed contract, including the balance deltas on both sides and the
 rejected second settlement.
 
-Direct suite: **161 tests**. `genvm_linter` check: clean. Thirteen critical
+Direct suite: **186 tests**. `genvm_linter` check: clean. Twenty-five critical
 guards were mutation-checked — each broken in a scratch copy to confirm the
 suite fails, against a clean accept-control run:
 
@@ -205,9 +213,43 @@ suite fails, against a clean accept-control run:
 | M11 | Unset-time guard (zero must not render as 1970) | yes |
 | M12 | Shipping deadline reaching the prompt | yes |
 | M13 | The rule that a seller's own entry is not proof of loading | yes |
+| M14 | `PARTY_CLAIM` hash must be empty or a real digest | yes |
+| M15 | Carrier-reference length cap | yes |
+| M16 | Hash defused on the way into the prompt | yes |
+| M17 | Carrier reference defused on the way into the prompt | yes |
+| M18 | A failed panel round is not charged to the trade | yes |
+| M19 | Appeal window clamped inside the resolution window | yes |
+| M20 | Appeal refused when no round could be heard | yes |
+| M21 | Creation reserves time to adjudicate | yes |
+| M22 | Recovery honours an existing verdict | yes |
+| M23 | An undisputed delivered trade cannot be recovered | yes |
+| M24 | The seller cannot self-certify delivery early | yes |
+| M25 | Evidence description defused into the prompt | yes |
 
-Two were only detected after the suite was strengthened: **M4** originally
-missed because the explicit `status != ADJUDICATING` guard was dead code — the
-allowlist already covered it — so the guard was removed and the allowlist
-documented as the mechanism (M4b); and **M8**'s digest check was unreachable
-through the public API, so a test now tampers with contract storage directly.
+Four were only detected after the suite was strengthened, and each taught
+something:
+
+- **M4** missed because the explicit `status != ADJUDICATING` guard was dead
+  code — the allowlist already covered it. The guard was deleted and the
+  allowlist documented as the mechanism (M4b). A redundant line that reads like
+  the mechanism points a reviewer at the wrong place.
+- **M8**'s digest check is unreachable through the public API, so a test now
+  tampers with contract storage directly.
+- **M16** missed for the same reason: once the boundary refuses anything that
+  is not empty-or-a-digest, no public path can put a fence in that field. It is
+  kept as a *second* layer against a future boundary regression, and pinned the
+  same way — by writing the hostile value straight into storage.
+
+- **M25** missed because the test named for the description sanitiser asserted
+  `payout_bps == 0` after mocking a CONFORMING panel. That assertion restates
+  the mock and the already-pinned remedy arithmetic; it holds with the
+  sanitiser deleted. The test now keys its mock on the *defused* text. A
+  security test that asserts a consequence the rest of the system already
+  guarantees will pass whether or not the defence exists.
+
+M14 was not a hardening exercise. It closes a real hole found during review:
+`document_hash` accepted arbitrary multi-line text for `PARTY_CLAIM` and was
+printed into the panel's prompt undefused, so a party could forge an
+`[AUTHORITATIVE]` evidence row — the one tier no party may write. `description`
+beside it *was* defused. Sanitising most of the untrusted fields is not
+sanitising the untrusted fields.

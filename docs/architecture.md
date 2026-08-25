@@ -337,3 +337,29 @@ subject and treat any unreachable source as `INSUFFICIENT_EVIDENCE` (fail
 closed, never a guess) — then probe on-chain and report exactly which sources
 validators can actually reach before binding them. I will not claim carrier
 verification that the deployment cannot perform.
+
+---
+
+## Errata — where the build diverged from this plan
+
+This document was written before implementation and is kept as written, because
+a plan quietly edited to match the outcome stops being evidence of anything.
+Three claims above are not what shipped. Each was caught by review, and each
+difference is deliberate:
+
+| §  | The plan said | What shipped, and why |
+|---|---|---|
+| 21–24 | the equivalence principle **pins** `reason_code` | It **frees** it. `reason_code` is prose the model chooses and it moves no money — the payout is derived from the findings. Pinning it would make honest validators disagree over a label. What is pinned: `ok`, the finding count, every `issue` and `result`, `material_breach`, and `carrier.readable`. |
+| 20 | the digest is `sha256` of `id\|type\|hash` | It is `id\|type\|`**`tier`**`\|hash`. Tier is provenance, and a package whose tiers changed is not the package that was frozen. |
+| 20 | "submissions are refused while `ADJUDICATING`" | The freeze is a **status allowlist** on the accepting side — evidence is taken only in `funded`, `shipped`, `delivered`, `disputed`. An explicit `!= ADJUDICATING` guard was written, found to be dead code by mutation testing, and deleted. |
+
+Two more things this plan did not anticipate, both found in review and both now
+fixed in the contract:
+
+- `SHIPPING_DEADLINE` was an arbitrable issue the panel had no way to decide,
+  because the prompt carried no deadlines. An agreed issue the panel cannot
+  decide is a remedy that can never be earned.
+- The appeal path could strand a trade in `adjudicating` past its resolution
+  deadline, and a stranded trade paid the buyer the whole escrow — so appealing
+  was a free option for whoever lost. The appeal window is now clamped, and
+  recovery honours a verdict that already exists instead of overwriting it.

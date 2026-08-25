@@ -3,9 +3,9 @@
   "network": "studionet",
   "chainId": 61999,
   "rpcUrl": "https://studio.genlayer.com/api",
-  "contractAddress": "0xB9526c7Aaefd3a81C056Df1102EcBF5Ca610CCA4",
-  "deployTxHash": "0xbb658933a1d2b91a82ad123838a2f2b95369b2da188bc7295369889f1eebc41f",
+  "contractAddress": "0x699fff65298c7ba2797DF236E5eB1C0DDB3c3A0F",
+  "deployTxHash": "0x6dc4242624cac477973d8998d9b773ec063e9bb34f43163db6abf361ff4f871c",
   "contractFile": "contracts/tradelayer.py",
-  "deployedAt": "2026-08-24T19:25:26.171Z",
-  "explorer": "https://explorer-studio.genlayer.com/address/0xB9526c7Aaefd3a81C056Df1102EcBF5Ca610CCA4"
+  "deployedAt": "2026-08-25T04:00:56.179Z",
+  "explorer": "https://explorer-studio.genlayer.com/address/0x699fff65298c7ba2797DF236E5eB1C0DDB3c3A0F"
 }

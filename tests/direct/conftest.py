@@ -332,7 +332,14 @@ class Desk:
         self.c.mark_shipped(tid, ref)
 
     def deliver(self, tid, sender=None):
-        self.vm.sender = sender or self.seller
+        """Defaults to the BUYER, deliberately.
+
+        It used to default to the seller, and `delivered_trade` recorded
+        delivery in the same breath as shipment — which is exactly the
+        self-certification the contract now refuses. A fixture that models the
+        attack as the happy path cannot catch it.
+        """
+        self.vm.sender = sender or self.buyer
         self.c.mark_delivered(tid)
 
     def evidence(self, tid, *, sender=None, etype="inspection_report",

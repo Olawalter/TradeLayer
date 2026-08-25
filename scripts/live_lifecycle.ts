@@ -123,7 +123,17 @@ async function main() {
   check("carrier reference bound before any dispute exists",
     t.carrier_reference === CARRIER_REF, t.carrier_reference);
 
-  await writeAndSettle(seller, "mark_delivered", "mark_delivered", [tid], 0n,
+  // The seller must NOT be able to record delivery before the agreed delivery
+  // deadline: doing so starts every clock that protects the buyer, and the
+  // dispute window would expire while the cargo is still at sea.
+  const earlyDelivery = await expectRevert(
+    seller, "seller self-certifies delivery early", "mark_delivered", [tid], 0n,
+    async () => ((await read("get_trade", [tid])) as any).status === "shipped",
+  );
+  check("the seller cannot self-certify delivery before the agreed deadline",
+    earlyDelivery);
+
+  await writeAndSettle(buyer, "buyer records delivery", "mark_delivered", [tid], 0n,
     async () => ((await read("get_trade", [tid])) as any).status === "delivered");
 
   // ── 4. evidence ─────────────────────────────────────────────────────────

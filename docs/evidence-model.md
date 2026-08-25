@@ -63,6 +63,23 @@ if tier == TIER_SUPPORTING:
 This is what separates a document from an assertion wearing a document's name.
 It is also, honestly, the limit of what the contract can check — see §7.
 
+A `PARTY_CLAIM` has no document, so it may carry **no** digest — but it may
+never carry free text:
+
+```python
+_require(len(str(document_hash).strip()) == 0 or _is_hex64(document_hash),
+         "[EXPECTED] document_hash must be empty or a sha256 hex digest")
+```
+
+That rule exists for a prompt-injection reason, not a tidiness one. This field
+is printed into the panel's prompt beside every evidence row. While it accepted
+arbitrary text, a party could store a multi-line string and forge an
+`[AUTHORITATIVE]` evidence row — the one tier no party is permitted to write —
+straight into the case the panel reads. `description` was defused; this field
+was not. **Sanitising most of the untrusted fields is not sanitising the
+untrusted fields.** The prompt now also defuses and truncates it, and the
+carrier reference beside it, as a second layer.
+
 ## 4. Where AUTHORITATIVE actually comes from
 
 During adjudication the contract fetches the carrier record itself:
@@ -107,8 +124,8 @@ _require(t.status in (STATUS_FUNDED, STATUS_SHIPPED, STATUS_DELIVERED, STATUS_DI
          "in the current trade status")
 ```
 
-`adjudicating`, `verdict_proposed`, `finalized`, `settled`, `refundable` and
-`cancelled` are all deliberately absent. That single list is the freeze.
+`adjudicating`, `verdict_proposed`, `finalized`, `settled` and `cancelled` are
+all deliberately absent. That single list is the freeze.
 
 > An earlier version also carried an explicit `status != ADJUDICATING` guard
 > underneath. Mutation testing showed that deleting it changed nothing — the

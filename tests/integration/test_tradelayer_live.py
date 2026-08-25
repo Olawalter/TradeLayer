@@ -25,16 +25,38 @@ import pytest
 CONTRACT_SOURCE = pathlib.Path("contracts/tradelayer.py")
 
 DEPLOYED = os.environ.get(
-    "TRADELAYER_ADDRESS", "0xB9526c7Aaefd3a81C056Df1102EcBF5Ca610CCA4")
+    "TRADELAYER_ADDRESS", "0x699fff65298c7ba2797DF236E5eB1C0DDB3c3A0F")
+RPC_URL = os.environ.get("GENLAYER_RPC", "https://studio.genlayer.com/api")
 
 VALID_STATUSES = {
     "created", "accepted", "funded", "shipped", "delivered", "disputed",
-    "adjudicating", "verdict_proposed", "finalized", "settled", "refundable",
-    "cancelled",
+    "adjudicating", "verdict_proposed", "finalized", "settled", "cancelled",
 }
 VALID_DECISIONS = {"", "SELLER_WIN", "BUYER_WIN", "PARTIAL_SETTLEMENT"}
 VALID_RESULTS = {"CONFORMING", "BREACH", "INSUFFICIENT"}
 TERMINAL = {"settled", "cancelled"}
+
+
+def deployed_schema() -> dict:
+    """The schema the CHAIN reports for this address.
+
+    Deliberately a raw JSON-RPC call rather than anything derived from the
+    local file: a test that reads the source to describe the deployment cannot
+    detect the two of them diverging.
+    """
+    import json
+    import urllib.request
+
+    body = json.dumps({
+        "jsonrpc": "2.0", "id": 1,
+        "method": "gen_getContractSchema", "params": [DEPLOYED],
+    }).encode()
+    req = urllib.request.Request(
+        RPC_URL, data=body, headers={"Content-Type": "application/json"})
+    with urllib.request.urlopen(req, timeout=60) as resp:
+        payload = json.loads(resp.read())
+    assert "error" not in payload, f"schema fetch failed: {payload.get('error')}"
+    return payload["result"]
 
 
 @pytest.fixture(scope="module")
@@ -79,12 +101,35 @@ def test_config_publishes_the_governing_rules(contract):
     assert len(cfg["issues"]) >= 3
 
 
-def test_the_deployed_contract_offers_no_privileged_escape(contract):
+def test_the_deployed_contract_offers_no_privileged_escape():
     """No withdraw, no outcome setter, no way to move the remedy table after
-    the fact. Asserted against the DEPLOYED schema, not the source."""
+    the fact.
+
+    Asserted against the schema the CHAIN reports for this address, fetched
+    with `gen_getContractSchema`. It used to run against `contract`, whose
+    schema the fixture derives from the local source file — so it was checking
+    that the source has no back door, while claiming to check the deployment.
+    Those are the same thing only when the deployment matches the source, which
+    is the very thing a test like this exists to establish.
+    """
+    schema = deployed_schema()
+    methods = set(schema["methods"])
+
     for forbidden in ("withdraw", "set_outcome", "set_payout", "set_status",
-                      "set_remedies", "admin_settle", "force_settle", "sweep"):
-        assert not hasattr(contract, forbidden), f"deployed contract exposes {forbidden}"
+                      "set_remedies", "set_decision", "amend_trade",
+                      "admin_settle", "force_settle", "sweep", "transfer_ownership"):
+        assert forbidden not in methods, f"deployed contract exposes {forbidden}"
+
+    # Exactly one method may ever receive value — the escrow deposit.
+    payable = [n for n, m in schema["methods"].items() if m.get("payable")]
+    assert payable == ["fund_trade"], f"unexpected payable methods: {payable}"
+
+    # And no method takes a payout address, so no caller can direct funds.
+    for name, m in schema["methods"].items():
+        for param, _kind in m.get("params", []):
+            assert param not in ("to", "recipient", "payout_to", "beneficiary"), (
+                f"{name} accepts a payout address: {param}"
+            )
 
 
 # ══ every trade on chain obeys the invariants ═══════════════════════════════

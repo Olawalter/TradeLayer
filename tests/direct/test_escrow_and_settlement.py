@@ -353,3 +353,128 @@ class TestPassport:
         desk.settle(tid)
         assert desk.passport(desk.buyer)["lost_as_buyer"] == 0
         assert desk.passport(desk.seller)["completed"] == 1
+
+
+class TestRecoveryIsAnAnswerToSilenceNotAWayToWin:
+    """Recovery exists so escrow cannot strand. Every route by which it could
+    instead become a way to WIN a decided case is closed here.
+    """
+
+    def test_recovery_honours_a_verdict_that_was_already_reached(self, desk, transfers):
+        """The one that pays. A verdict of SELLER_WIN is on record; the buyer
+        waits out the recovery deadline and claims. The escrow must follow the
+        findings, not the clock."""
+        tid = desk.adjudicated_trade()                     # SELLER_WIN, 0 bps
+        assert desk.trade(tid)["decision"] == "SELLER_WIN"
+        desk.past_recovery(tid)
+        desk.vm.sender = desk.buyer
+        desk.c.claim_timeout_refund(tid)
+
+        t = desk.trade(tid)
+        assert t["status"] == "settled"
+        assert int(t["payout_bps"]) == 0, "a recorded verdict was overwritten by the clock"
+        assert int(t["buyer_paid"]) == 0
+        assert int(t["seller_paid"]) == TRADE_VALUE
+        assert [x["to"] for x in transfers] == [desk.seller_hex]
+        assert transfers[0]["value"] == TRADE_VALUE
+
+    def test_recovery_honours_a_partial_verdict(self, desk, transfers):
+        tid = desk.adjudicated_trade({"PRODUCT_MODEL": BREACH, "QUANTITY": CONFORMING,
+                                      "QUALITY_GRADE": CONFORMING,
+                                      "SHIPPING_DEADLINE": CONFORMING})
+        bps = int(desk.trade(tid)["payout_bps"])
+        assert 0 < bps < 10000
+        desk.past_recovery(tid)
+        desk.vm.sender = desk.buyer
+        desk.c.claim_timeout_refund(tid)
+
+        t = desk.trade(tid)
+        assert int(t["payout_bps"]) == bps
+        assert int(t["buyer_paid"]) + int(t["seller_paid"]) == TRADE_VALUE
+        assert sum(x["value"] for x in transfers) == TRADE_VALUE
+
+    def test_recovery_still_refunds_in_full_when_nothing_was_ever_decided(self, desk, transfers):
+        """The case recovery is FOR: a dispute that stalled with no verdict."""
+        tid = desk.disputed_trade()
+        assert desk.trade(tid)["decision"] == ""
+        desk.past_recovery(tid)
+        desk.vm.sender = desk.buyer
+        desk.c.claim_timeout_refund(tid)
+
+        t = desk.trade(tid)
+        assert t["decision"] == "BUYER_WIN"
+        assert int(t["buyer_paid"]) == TRADE_VALUE
+        assert [x["to"] for x in transfers] == [desk.buyer_hex]
+
+    def test_an_undisputed_delivered_trade_cannot_be_recovered(self, desk, transfers):
+        """Nobody disputed. The closed dispute window IS the answer, and
+        close_undisputed is permissionless — so refusing here strands nothing
+        and stops the buyer taking an escrow they never contested."""
+        tid = desk.delivered_trade()
+        desk.past_recovery(tid)
+        desk.vm.sender = desk.buyer
+        with desk.vm.expect_revert("never disputed"):
+            desk.c.claim_timeout_refund(tid)
+        assert transfers == []
+        # And the seller's route is still open, from the same instant.
+        desk.vm.sender = desk.seller
+        desk.c.close_undisputed(tid)
+        desk.past_settlement(tid)
+        desk.settle(tid)
+        assert [x["to"] for x in transfers] == [desk.seller_hex]
+
+    def test_the_buyer_can_still_recover_an_undelivered_trade(self, desk, transfers):
+        """The guard must be narrow: it keys on a delivered-and-undisputed
+        trade, not on 'no dispute exists'. A trade that never arrived has no
+        dispute either, and there the buyer must still get their money."""
+        tid = desk.funded_trade()
+        desk.ship(tid)
+        desk.past_recovery(tid)
+        desk.vm.sender = desk.buyer
+        desk.c.claim_timeout_refund(tid)
+        assert [x["to"] for x in transfers] == [desk.buyer_hex]
+        assert transfers[0]["value"] == TRADE_VALUE
+
+
+class TestTheSellerCannotSelfCertifyDelivery:
+    """Recording delivery starts every clock that protects the buyer. Letting
+    the seller pick that instant lets them expire the dispute window while the
+    goods are still at sea, then take the escrow through close_undisputed."""
+
+    def test_the_seller_cannot_record_delivery_before_the_agreed_deadline(self, desk):
+        tid = desk.funded_trade()
+        desk.ship(tid)
+        desk.vm.sender = desk.seller
+        with desk.vm.expect_revert("cannot self-certify it early"):
+            desk.c.mark_delivered(tid)
+
+    def test_the_seller_may_record_delivery_from_the_agreed_deadline(self, desk):
+        tid = desk.funded_trade()
+        desk.ship(tid)
+        desk.w.set_now(int(desk.trade(tid)["delivery_deadline"]))
+        desk.vm.sender = desk.seller
+        desk.c.mark_delivered(tid)
+        assert desk.trade(tid)["status"] == "delivered"
+
+    def test_the_buyer_may_record_delivery_at_any_time(self, desk):
+        """The buyer knows when the goods arrived; starting their own clock
+        early is their business, and early arrival is normal."""
+        tid = desk.funded_trade()
+        desk.ship(tid)
+        desk.vm.sender = desk.buyer
+        desk.c.mark_delivered(tid)
+        assert desk.trade(tid)["status"] == "delivered"
+
+    def test_the_ship_and_grab_sequence_no_longer_works(self, desk, transfers):
+        """The whole attack, end to end: ship, self-certify delivery, run the
+        dispute window out while the cargo is at sea, close, settle."""
+        tid = desk.funded_trade(dispute_window=600)
+        desk.ship(tid)
+        desk.vm.sender = desk.seller
+        with desk.vm.expect_revert("cannot self-certify it early"):
+            desk.c.mark_delivered(tid)
+        desk.w.advance(601)
+        desk.vm.sender = desk.seller
+        with desk.vm.expect_revert("not awaiting a dispute"):
+            desk.c.close_undisputed(tid)
+        assert transfers == []

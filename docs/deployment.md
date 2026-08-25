@@ -12,11 +12,11 @@ the live proof.
 | Network | GenLayer StudioNet |
 | Chain id | `61999` |
 | RPC | `https://studio.genlayer.com/api` |
-| Contract | `0xB9526c7Aaefd3a81C056Df1102EcBF5Ca610CCA4` |
-| Deploy tx | `0xbb658933a1d2b91a82ad123838a2f2b95369b2da188bc7295369889f1eebc41f` |
+| Contract | `0x699fff65298c7ba2797DF236E5eB1C0DDB3c3A0F` |
+| Deploy tx | `0x6dc4242624cac477973d8998d9b773ec063e9bb34f43163db6abf361ff4f871c` |
 | Source | `contracts/tradelayer.py` |
 | Runner | `py-genlayer:1jb45aa8ynh2a9c9xn3b7qqh8sm5q93hwfp7jqmwsfhh8jpz09h6` |
-| Explorer | https://explorer-studio.genlayer.com/address/0xB9526c7Aaefd3a81C056Df1102EcBF5Ca610CCA4 |
+| Explorer | https://explorer-studio.genlayer.com/address/0x699fff65298c7ba2797DF236E5eB1C0DDB3c3A0F |
 
 The artifact is written to `deploy/deployment.json` by the deploy script; it is
 the machine-readable copy of the table above.
@@ -42,7 +42,7 @@ Create `.env` in the project root. It is git-ignored and must stay that way.
 ```
 BUYER_PK=0x<studionet private key>
 SELLER_PK=0x<a different studionet private key>
-TRADELAYER_ADDRESS=0xB9526c7Aaefd3a81C056Df1102EcBF5Ca610CCA4
+TRADELAYER_ADDRESS=0x699fff65298c7ba2797DF236E5eB1C0DDB3c3A0F
 ```
 
 Both keys need StudioNet GEN. The buyer key funds escrow and pays for most
@@ -83,7 +83,7 @@ The first line of the contract is a runner pin:
 python -m pytest tests/direct -q
 ```
 
-161 tests, no network and no model calls — every nondeterministic source is
+186 tests, no network and no model calls — every nondeterministic source is
 mocked by the `World` fixture in `tests/direct/conftest.py`. Expect roughly 40
 seconds.
 
@@ -117,9 +117,9 @@ npm run lifecycle
 
 This drives the full path against the deployed contract with real GEN: create,
 accept, fund, ship, deliver, file evidence, dispute, respond, freeze,
-adjudicate, finalize, settle — plus the negative cases (underfunding, a
-self-declared authoritative tier, a late evidence filing, an early finalize, an
-early settle, a double settle).
+adjudicate, finalize, settle — plus the negative cases (a repeat funding
+attempt, a self-declared authoritative tier, a late evidence filing, an early
+finalize, an early settle, a double settle).
 
 It runs in **real time**. The appeal window and the settlement delay are wall
 clock, so the script sleeps through them. With the demo parameters
@@ -186,6 +186,7 @@ rejection is distinguishable from a genuine fault at a glance.
 | `MAX_APPEALS` | 2 | Appeals and adjudication rounds both capped |
 | `MIN_TRADE_VALUE_WEI` | 0.001 GEN | Dust floor |
 | `MAX_EVIDENCE_PER_TRADE` | 24 | Filing cap |
+| `MAX_CARRIER_REF` | 64 chars | Cap on the reference printed into the prompt |
 
 `create_trade` refuses a resolution window that does not leave room for
 `RESPONSE_WINDOW + appeal_window + MIN_WINDOW`. This is why a demo-length trade

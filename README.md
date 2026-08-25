@@ -12,11 +12,11 @@ payout using remedies **both parties agreed before the goods shipped**.
 | | |
 |---|---|
 | Network | GenLayer StudioNet (chain id `61999`) |
-| Contract | `0xB9526c7Aaefd3a81C056Df1102EcBF5Ca610CCA4` |
-| Deploy tx | `0xbb658933a1d2b91a82ad123838a2f2b95369b2da188bc7295369889f1eebc41f` |
-| Source | [`contracts/tradelayer.py`](contracts/tradelayer.py) — sha256 `ab619308efd4f80832fc869dbe0d53c4109db2955dd205377301baf455e7a77f` |
+| Contract | `0x699fff65298c7ba2797DF236E5eB1C0DDB3c3A0F` |
+| Deploy tx | `0x6dc4242624cac477973d8998d9b773ec063e9bb34f43163db6abf361ff4f871c` |
+| Source | [`contracts/tradelayer.py`](contracts/tradelayer.py) — sha256 `c0cb2abec6c89c4c7090bc15f4deac9f380e222005cc424ad228c4d5197c615c` |
 | On-chain schema | 27 methods — 10 view, 17 write, **1 payable** |
-| Tests | 161 direct · 13/13 critical guards mutation-checked |
+| Tests | 186 direct · 25/25 critical guards mutation-checked |
 | Status | P0 complete — contract, suites, deployment and live proof. Frontend is P1. |
 
 Deployed bytes were fetched back with `genlayer code` and compared to the
@@ -128,18 +128,35 @@ Detail: [`docs/architecture.md`](docs/architecture.md).
                                           │
                                  settlement delay (300s)
                                           ▼
-                                       settled          ── or ──▶  refundable
-                                                                   (resolution deadline
-                                                                    + 7-day grace passed;
-                                                                    buyer recovers)
+                                       settled
+
+  Recovery, once the resolution deadline plus a seven-day grace has passed,
+  from any state before a verdict is final:
+
+      funded | shipped | delivered | disputed | adjudicating | verdict_proposed
+                                  │
+                       buyer calls claim_timeout_refund
+                                  ▼
+                       settled  (reason_code TIMEOUT_RECOVERY)
+
+  Recovery answers SILENCE; it is not a way to win.
+    * nothing decided  -> the buyer recovers the whole deposit
+    * verdict on record -> the recorded verdict is settled, at its bps
+    * delivered, never disputed -> REFUSED; close_undisputed is the route,
+      and anyone may call it
+
+  There is no intermediate "refundable" state: the claim IS the withdrawal,
+  in one transaction.
 ```
 
 Escrow is credited from `gl.message.value` — there is no amount parameter
 anywhere, so no caller can claim a deposit they did not make. Funding must equal
 the agreed amount exactly; overfunding is refused rather than pocketed.
 
-Nothing strands. From any pre-terminal state, once the resolution deadline plus
-a seven-day grace has passed, the buyer can recover the deposit.
+Nothing strands, and nothing is won by waiting. Once the resolution deadline
+plus a seven-day grace has passed, the buyer can recover a trade that was never
+decided — but a recorded verdict is settled at the payout its findings produced,
+and a delivered trade nobody disputed goes to the seller.
 
 ## 6. Evidence lifecycle
 
@@ -243,7 +260,7 @@ Then create `.env` (git-ignored):
 ```
 BUYER_PK=0x<studionet key>
 SELLER_PK=0x<a different studionet key>
-TRADELAYER_ADDRESS=0xB9526c7Aaefd3a81C056Df1102EcBF5Ca610CCA4
+TRADELAYER_ADDRESS=0x699fff65298c7ba2797DF236E5eB1C0DDB3c3A0F
 ```
 
 ## 11. Testing
@@ -252,7 +269,7 @@ TRADELAYER_ADDRESS=0xB9526c7Aaefd3a81C056Df1102EcBF5Ca610CCA4
 python -m pytest tests/direct -q
 ```
 
-**161 tests**, no network and no model calls — every nondeterministic source is
+**186 tests**, no network and no model calls — every nondeterministic source is
 mocked in `tests/direct/conftest.py`.
 
 | Suite | Covers |
@@ -266,17 +283,29 @@ The fixtures model a hostile-but-normal world rather than a friendly one — the
 chain-floor source lags 1250 seconds by default, so a passing test has passed
 against an indexer that is behind.
 
-**Mutation-checked.** Nine guards were individually broken in a scratch copy to
-confirm the suite fails: the remedy arithmetic, the remedy-table cap, the
-settlement delay, the freeze, the tier allowlist, the beacon ceiling, the
-complete-findings rule, the payout clamp, and the digest integrity check. All
-nine were detected — two only after the suite was strengthened:
+**Mutation-checked.** Every critical guard was individually broken in a scratch
+copy to confirm the suite fails, each run against a clean accept-control. The
+guard-by-guard table lives in
+[`docs/escrow-security.md`](docs/escrow-security.md#7-live-verification) so
+there is one place to keep honest rather than two.
+
+Three were only detected after the suite was strengthened, and the misses were
+the useful part:
 
 - the explicit `status != ADJUDICATING` freeze guard turned out to be **dead
   code** (the allowlist already covered it) and was removed rather than left to
   mislead a reviewer;
 - the digest check was unreachable through the public API, so a test now tampers
-  with contract storage directly.
+  with contract storage directly;
+- the evidence-description sanitiser — the largest party-controlled channel into
+  the prompt — was pinned by nothing. The test named for it asserted
+  `payout_bps == 0` after mocking a CONFORMING panel, which restates the mock
+  and the remedy arithmetic. It now keys the mock on the **defused** text, so it
+  can only pass if the sanitiser actually ran.
+
+That last one is the pattern worth naming: a security test that asserts a
+*consequence* the rest of the system already guarantees will pass whether or not
+the defence exists.
 
 Lint:
 
@@ -301,7 +330,7 @@ instructions, including how to read a reverted transaction: [`docs/deployment.md
 ## 13. Verified end to end
 
 Every row below is a transaction against
-`0xB9526c7Aaefd3a81C056Df1102EcBF5Ca610CCA4` on StudioNet, from one run of
+`0x699fff65298c7ba2797DF236E5eB1C0DDB3c3A0F` on StudioNet, from one run of
 `npm run lifecycle`. Trade `TL-1000`, 0.5 GEN of real escrow, **0 failures**.
 
 | Step | Transaction | Outcome |
@@ -421,7 +450,7 @@ Stated plainly, because a review that only lists strengths is marketing.
 ```
 contracts/tradelayer.py            the Intelligent Contract
 registry/                          demo carrier records the contract binds
-tests/direct/                      161 tests, fully mocked
+tests/direct/                      186 tests, fully mocked
 tests/integration/                 invariant tests against a live deployment
 scripts/deploy.ts                  deploy + write deploy/deployment.json
 scripts/live_lifecycle.ts          the end-to-end on-chain proof

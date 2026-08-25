@@ -15,7 +15,9 @@ time source from one fake clock, so the sources always agreed and the guards
 could never fire.
 """
 
-from .conftest import CONFORMING, DEFAULT_ISSUES, TRADE_VALUE, carrier_record, verdict
+from .conftest import (
+    CARRIER_REF, CONFORMING, DEFAULT_ISSUES, TRADE_VALUE, carrier_record, verdict,
+)
 
 
 # ─── Deadlines ───────────────────────────────────────────────────────────────
@@ -96,8 +98,9 @@ class TestResponseWindow:
             desk.create(resolution_window=3600)
 
     def test_a_resolution_window_with_room_is_accepted(self, desk):
-        """The minimum that fits: response window + appeal window + slack."""
-        window = 3 * 24 * 3600 + 600 + 120
+        """The exact minimum that fits: the seller's response window, the appeal
+        window, and MIN_ADJUDICATION_TIME to actually hear a round."""
+        window = 3 * 24 * 3600 + 600 + 600
         tid = desk.create(resolution_window=window, appeal_window=600)
         assert desk.trade(tid)["resolution_window"] == str(window)
         assert desk.trade(tid)["appeal_window"] == "600"
@@ -318,3 +321,115 @@ class TestClockHardening:
         with desk.vm.expect_revert("time sources unreachable or unreliable"):
             desk.c.settle(tid)
         assert transfers == []
+
+
+class TestTheAppealPathCannotStrandTheEscrow:
+    """A losing party must never be able to convert a verdict against them into
+    a full refund by running the clock out.
+
+    Three distinct routes into that outcome, all ending the same way: the trade
+    sits in a state with no exit, the recovery deadline passes, and the buyer
+    takes 100% of an escrow the panel awarded to the seller.
+    """
+
+    def test_an_appeal_is_refused_when_no_round_could_be_heard(self, desk):
+        """The clamp below normally makes this unreachable — the appeal window
+        closes before the time runs out. It is kept as a second bound, and
+        pinned from storage, because the cost of it being wrong is not a
+        stalemate: a trade stuck in `adjudicating` pays the buyer the whole
+        escrow at recovery, so the party the verdict went against is exactly
+        the one who profits from causing it."""
+        tid = desk.adjudicated_trade()
+        assert desk.trade(tid)["decision"] == "SELLER_WIN"
+        res = int(desk.trade(tid)["resolution_deadline"])
+
+        from genlayer import u256
+        # Force the state the clamp is there to prevent.
+        desk.c.trades[tid].appeal_deadline = u256(res)
+        desk.w.set_now(res - 1)
+        desk.vm.sender = desk.buyer
+        with desk.vm.expect_revert("not enough time"):
+            desk.c.submit_appeal(tid)
+
+    def test_the_appeal_window_is_clamped_to_leave_room_for_a_further_round(self, desk):
+        """The appeal window is set when the verdict lands, so a verdict reached
+        LATE in the resolution window would otherwise open a window closing
+        after the resolution deadline: `finalize` refuses (window still open)
+        and `adjudicate` refuses (deadline passed). No terminal state left."""
+        app = 3 * 24 * 3600
+        tid = desk.disputed_trade(appeal_window=app,
+                                  resolution_window=3 * 24 * 3600 + app + 600)
+        res = int(desk.trade(tid)["resolution_deadline"])
+        desk.w.set_carrier(carrier_record(CARRIER_REF))
+        desk.w.set_panel(verdict({i: CONFORMING for i in DEFAULT_ISSUES}))
+        desk.begin(tid)
+        # Adjudicate at the last legal moment.
+        desk.w.set_now(res - 60)
+        desk.adjudicate(tid)
+
+        t = desk.trade(tid)
+        assert t["status"] == "verdict_proposed"
+        assert int(t["appeal_deadline"]) == res - 600, (
+            "the appeal window must be clamped to leave a round's worth of time"
+        )
+        assert int(t["appeal_deadline"]) < res, (
+            "an appeal window outliving the resolution deadline deadlocks the trade"
+        )
+        # And the trade is still finalizable — the clamp must not create a new
+        # deadlock of its own.
+        desk.w.set_now(int(t["appeal_deadline"]) + 1)
+        desk.finalize(tid)
+        assert desk.trade(tid)["status"] == "finalized"
+
+    def test_a_verdict_stays_reachable_after_an_appeal_is_granted(self, desk):
+        """End to end: appeal at the last legal moment, then prove the trade
+        can still be adjudicated, finalized and settled."""
+        tid = desk.adjudicated_trade()
+        deadline = int(desk.trade(tid)["appeal_deadline"])
+        desk.w.set_now(deadline)                       # the last legal instant
+        desk.appeal(tid)
+        assert desk.trade(tid)["status"] == "adjudicating"
+        desk.adjudicate(tid)
+        assert desk.trade(tid)["status"] == "verdict_proposed", (
+            "the appeal left no time to re-adjudicate"
+        )
+
+
+class TestAFailedPanelDoesNotCostTheTradeItsRounds:
+    """A transient panel failure decides nothing, so it must cost nothing.
+
+    If failures consume adjudication rounds, three of them exhaust the trade
+    while the resolution deadline is still open — the case can never be
+    decided, and the escrow falls to the buyer whatever the merits. Worse, a
+    party can aim for that: evidence is theirs to write before the freeze, and
+    output that reliably breaks the panel is not hard to write.
+    """
+
+    def test_failures_do_not_consume_a_round(self, desk):
+        tid = desk.disputed_trade()
+        desk.w.set_carrier(carrier_record(CARRIER_REF))
+        desk.begin(tid)
+        for _ in range(4):
+            desk.w.set_panel("not json at all")
+            desk.adjudicate(tid)
+            assert desk.trade(tid)["status"] == "disputed"
+            desk.begin(tid)
+        # After four dead rounds the case must still be decidable.
+        desk.w.set_panel(verdict({i: CONFORMING for i in DEFAULT_ISSUES}))
+        desk.adjudicate(tid)
+        assert desk.trade(tid)["status"] == "verdict_proposed"
+
+    def test_the_documented_promise_holds(self, desk):
+        """README and docs/adjudication.md both say a failed panel leaves the
+        trade adjudicable until its resolution deadline. This is that sentence,
+        as a test."""
+        tid = desk.disputed_trade()
+        desk.w.set_carrier(carrier_record(CARRIER_REF))
+        desk.begin(tid)
+        desk.w.set_panel("{ not json")
+        desk.adjudicate(tid)
+        t = desk.trade(tid)
+        assert t["status"] == "disputed"
+        assert int(t["adjudication_count"]) == 0, (
+            "a round that decided nothing was still charged to the trade"
+        )
