@@ -107,11 +107,30 @@ If the fetch fails, `readable` is `false`, the excerpt is empty, and the panel
 is told plainly that no authoritative record could be retrieved. It is not told
 to assume anything.
 
-This was verified on-chain rather than assumed: `npm run probe` against the
-deployed contract, with the registry URL 404ing, returns `readable: false` and
-an **empty** excerpt — so `gl.nondet.web.render` raises on a 404 instead of
-handing back GitHub's error page. An error page fenced as an authoritative
-carrier record would be a worse outcome than no record at all.
+Both directions are verified on-chain rather than assumed, with `npm run probe`:
+
+- **Unreachable.** While the registry URL 404'd, the probe returned
+  `readable: false` with an **empty** excerpt — so `gl.nondet.web.render`
+  raises on a 404 instead of handing back GitHub's error page. An error page
+  fenced as an authoritative carrier record would be worse than no record.
+- **Reachable.** Once the registry was published, the same probe returned
+  `readable: true` with a digest over the retrieved text. Validators reach the
+  bound host and agree on what it said.
+
+The second probe is also the clearest demonstration of why the tiers exist. The
+retrieved record decided two issues and refused the other two:
+
+| Issue | Finding | Why |
+|---|---|---|
+| `QUANTITY` | **BREACH** | the carrier tallied 900 units against 1,000 agreed |
+| `SHIPPING_DEADLINE` | CONFORMING | loaded on board before the deadline |
+| `PRODUCT_MODEL` | INSUFFICIENT | the carrier does not open or inspect the cargo |
+| `QUALITY_GRADE` | INSUFFICIENT | a carrier cannot establish a grade |
+
+Nobody told the panel that a bill of lading counts packages but does not verify
+contents. It read a record that says so itself — *"the carrier does not open,
+inspect, test or grade the cargo"* — and confined its findings to what that
+record can actually support.
 
 ## 5. The freeze
 

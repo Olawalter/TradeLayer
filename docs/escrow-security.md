@@ -109,9 +109,22 @@ number a model produced. Even if a model volunteers `payout_bps` in its JSON,
 there is nowhere for it to land — settlement reads the remedy table.
 
 `INSUFFICIENT` contributes zero. The claimant carries the burden of proof: an
-unproven breach never moves money. This is not a theoretical property — the live
-run's panel returned INSUFFICIENT on all four issues against a party claim, and
-the seller kept the entire escrow.
+unproven breach never moves money. Both halves are demonstrated on chain:
+
+- With **no authoritative record retrievable**, the panel returned INSUFFICIENT
+  on all four issues against a party claim, and the seller kept the entire
+  escrow.
+- With the record **retrieved**, the panel found `QUANTITY` breached (900 units
+  tallied against 1,000 agreed), `SHIPPING_DEADLINE` conforming, and refused
+  the two issues a carrier record cannot decide — including `PRODUCT_MODEL`,
+  the one the buyer actually claimed and the one carrying the largest remedy.
+  The contract derived `payout_bps = 2000` from the agreed table and split the
+  escrow 0.1 / 0.4 GEN.
+
+The second case is the one worth dwelling on: the panel had every incentive to
+side with the claimant and the largest remedy sitting on the issue it refused.
+It refused because the retrieved record says of itself that the carrier does not
+open or inspect the cargo.
 
 ---
 
@@ -165,8 +178,10 @@ the seller kept the entire escrow.
    keys and a contract cannot hold a secret. The *mechanism* is right — the
    reference is bound before any dispute exists, on a host the contract fixes —
    but a production deployment needs genuinely independent carrier and customs
-   endpoints. Until then, an unreachable record yields INSUFFICIENT rather than
-   a guess.
+   endpoints — a source the project publishes is not an independent one. The
+   retrieval mechanism itself is proven live in both directions: an unreachable
+   record yields INSUFFICIENT rather than a guess, and a retrieved one produces
+   findings confined to what it can support.
 
 3. **The panel's judgment is constrained, not eliminated.** Structural
    validation, the issue allowlist, the sufficiency semantics and the equivalence

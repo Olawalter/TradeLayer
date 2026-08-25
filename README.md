@@ -412,36 +412,36 @@ instructions, including how to read a reverted transaction: [`docs/deployment.md
 
 Every row below is a transaction against
 `0xE9b6e3FC11EbbB1adA32219CEBF43c9d4a3113e5` on StudioNet, from one run of
-`npm run lifecycle`. Trade `TL-1000`, 0.5 GEN of real escrow, **0 failures**.
+`npm run lifecycle`. Trade `TL-1002`, 0.5 GEN of real escrow, **0 failures**.
 
 | Step | Transaction | Outcome |
 |---|---|---|
-| create_trade | `0x5bee22db2a92afca853fd7f17d5ac250452a8434bc36d01c44bc5dafe8032061` | accepted |
-| accept_trade | `0xe887af59e09470b7584fb6cb16193d92554a9ecc37a565073dd0cb85581fadcd` | accepted |
-| fund_trade 0.5 GEN | `0x3f7ef91a5185bc89855fdf4ee470b6b562e446fe526e209a714238cdc5d4c3aa` | accepted |
-| underfund attempt | `0xa1f7789b58b6c4cebe30c9c4a60e917b14c6f78498111274ab717d875b82e8dc` | **rejected** — this trade is already funded |
-| mark_shipped | `0x3e4557f65b704952bc32997ef83db49257dc6077222979bd7fbbe3a1eae197ec` | accepted |
-| seller self-certifies delivery early | `0xd0a56772b0a4f70dfd4ad1743493a2884e99648731aa8ce17c6a22077600e8a2` | **rejected** — before the agreed delivery deadline, only the buyer may record delivery — the… |
-| buyer records delivery | `0x4804a77276f0ac0304af108a363abb0b85db278f3bdf8a2b562146470600fdff` | accepted |
-| seller files inspection report | `0x91a68689c4a510ba8ce1399dd723a1983bcf6e17c62825bf23697f8ffa192989` | accepted |
-| buyer files a statement | `0x0110297709fa42b2967a9a7221a3bb71faf780036f3bb9e56be8788a43df0392` | accepted |
-| seller self-declares AUTHORITATIVE | `0x8495c454bd036bb775e8b133b82f8c09396c3f3720ca58f4aaf91aa73a498564` | **rejected** — parties may file SUPPORTING or PARTY_CLAIM evidence; AUTHORITATIVE records… |
-| open_dispute | `0x1fbb92a093a4b98cf5b511d20f317c6f7e48f047b03ef2e57fa9855d335dd361` | accepted |
-| respond_to_dispute | `0xcb5dbafd050ef7b591f29aab98a6744f22b1486cba8db93800aa7c193596e277` | accepted |
-| begin_adjudication | `0x8b3ee7cda0bbd5af01bc675695ec0db09f4d80271f9f2b69568de93003e791eb` | accepted |
-| file evidence while frozen | `0x9522352613b484b29ec048b53715d1aab86ceb79e687922fd7d30e0d4234a5c0` | **rejected** — the evidence package is frozen: evidence is not accepted in the current trade… |
-| adjudicate | `0x88ffeed0c5c4c646d240f188f95c1d41762747750b898c13342046fef0af2b8b` | accepted |
-| finalize during appeal window | `0xfffee09383cab6325247972a84fd1efe049cfe5b81168446f3821b6ef7e1c2ee` | **rejected** — the appeal window is still open |
-| finalize | `0x0ac842e886c97c1e6b1c6021aef3938de98385161e6f4f235bc07aa481ad8454` | accepted |
-| settle before the delay elapses | `0x35f72454e9e90260e9b897696cba2187083c3e8fb4fdab9c2bfaf7eb9866f793` | **rejected** — the settlement window is still arming; settlement unlocks shortly after… |
-| settle | `0x49894d3a5bb1931ca95745a1c7c14dd5bb4bd63a073d99a6fce9edfc43fc0c26` | accepted |
-| second settle | `0xccf3c51c311ddf2050df5ebd3754badf3703d40b6af886db25eaf07e52dbc81f` | **rejected** — this trade has no finalized verdict to settle |
+| create_trade | `0x72be7ea38319032215d47ca7f1bdfa7043e892e470207be59a1aaf403f07b73e` | accepted |
+| accept_trade | `0x57f3942c2cbb47e35e632fde091f12d2dda81880ed19c62cbeccc1c1477635db` | accepted |
+| fund_trade 0.5 GEN | `0x6cac08cb1ace9abf746554e659e105801bbde3a5f152afeb092622b87d485b7b` | accepted |
+| underfund attempt | `0xe33a5aea5fd0b855a5e5dc2e79cb96ffe0ae172fd031d3ecc0aaee1ba97fad84` | **rejected** — this trade is already funded |
+| mark_shipped | `0x5bf41e25807a25f42b3a87bc4b2a77f99c14b2520c5a38c966887d55e1010780` | accepted |
+| seller self-certifies delivery early | `0x29ecc7446749411d715ff36fc918179d946fb57670d5126a82c0e06389dbf0f5` | accepted |
+| buyer records delivery | `0xb4f6ac9b003fd647d9c05d259fefce466885c433e10ae6c23e7621345a40758b` | accepted |
+| seller files inspection report | `0x96eefa0157b78cc139d5299b175acfe9ab867109c931b31e6364028bbfcb9828` | accepted |
+| buyer files a statement | `0x07059b638b5474feb0e1322e5587e238eb79bc1f9fc446d43e94409d013bff6d` | accepted |
+| seller self-declares AUTHORITATIVE | `0xf9f47328249551d14ebaa7df770aaf7f879ab24cb1bc7d727589ab651c201d07` | **rejected** — parties may file SUPPORTING or PARTY_CLAIM evidence; AUTHORITATIVE records… |
+| open_dispute | `0x3e2d09fb22bd7c305b6666a455e8958cc818999a3a197dd5e04e5042254e9154` | accepted |
+| respond_to_dispute | `0xde09632c7a81d146d35972ca98ea1b578d4cb848c52ceefeb0fefa8d77163a40` | accepted |
+| begin_adjudication | `0x6c66f07f3be0ae7b66d25c184eb0cada95298effdd86d063ffcdc331f67248f4` | accepted |
+| file evidence while frozen | `0x6a5d426c361dc8ac7bae7d281e3d6ad77e3285bd0ddf14be8ed13d84438dbbe9` | **rejected** — the evidence package is frozen: evidence is not accepted in the current trade… |
+| adjudicate | `0xec6e6c4da1cda412d104ee119f561dca344c209a4173436c38b03e3ebbbcdc81` | accepted |
+| finalize during appeal window | `0x20bc251bee2f6ac0cf10668505a9e1f077a7ad5e36b169396d9e80ebefc7434d` | **rejected** — the appeal window is still open |
+| finalize | `0x789ab416bf1aaf563e1b2683a76bce7b9c9bdb4e9ca305810d1fcb3be49d2b5b` | accepted |
+| settle before the delay elapses | `0x09922d095dc923d149bc0e35a710747967c08424ecf388e2c041a66f36fba013` | **rejected** — the settlement window is still arming; settlement unlocks shortly after… |
+| settle | `0xc211e118df57003fa74e076a76773a5085fdf70d48f5011391805d997a373c59` | accepted |
+| second settle | `0xc84bcc52c6c79cb9d875039e2366c5e01d7e0c09f6e2872e7c11181a8e3c6fb3` | **rejected** — this trade has no finalized verdict to settle |
 
 Wallet deltas, not just contract state:
 
 ```
-buyer  211769999999999999900 -> 211769999999999999900
-seller 212220000000000000000 -> 212720000000000000000
+buyer  210969999999999999900 -> 211069999999999999900
+seller 212720000000000000000 -> 213120000000000000000
 ```
 
 The two payouts reconstitute the escrow exactly. Full transcript in
@@ -454,39 +454,59 @@ no-privileged-escape check read from the chain's own schema via
 
 ### What the panel actually did
 
-Against a buyer's unsupported claim that model XP-100 was delivered, and with
-**no authoritative record retrievable**, it returned `INSUFFICIENT` on all four
-issues — so the derived payout was 0 bps and the seller kept the escrow. That is
-the burden of proof working, not the system failing to decide.
+The buyer claimed model XP-100 was delivered instead of XP-200. The contract
+retrieved the carrier record itself — from a host fixed in its own code, under
+a reference the seller bound at shipment, before anyone knew what would be
+contested — and the panel confined its findings to what that record can
+actually support:
 
-An on-chain probe (`npm run probe`, tx
-`0x7c38ab27a1ef92f15d446400b64d5bd36e5d15f2ebb04d6a84c2dea8ad58c1ce`) confirms
-why, and confirms it fails in the right direction:
+| Issue | Finding | Agreed remedy | Why |
+|---|---|---|---|
+| `PRODUCT_MODEL` | INSUFFICIENT | 65% | the carrier does not open or inspect cargo |
+| **`QUANTITY`** | **BREACH** | **20%** | the carrier tallied **900** units against 1,000 agreed |
+| `QUALITY_GRADE` | INSUFFICIENT | 10% | a carrier cannot establish a quality grade |
+| `SHIPPING_DEADLINE` | CONFORMING | 5% | loaded on board before the deadline |
+
+Nobody told the panel that a bill of lading counts packages but does not verify
+contents. It read a record that says so itself — *"the carrier does not open,
+inspect, test or grade the cargo"* — and refused the two issues that record
+cannot decide, **including the one the buyer actually claimed**, which carried
+the largest remedy of the four.
+
+Then the contract did the arithmetic:
 
 ```
-source url : https://raw.githubusercontent.com/Olawalter/TradeLayer/main/registry/MAEU-4471-2026
-READABLE   : false
-excerpt    : ""
+breached = [QUANTITY]  ->  payout_bps = 2000  ->  PARTIAL_SETTLEMENT
 ```
 
-`gl.nondet.web.render` **raises** on the 404 rather than returning GitHub's
-error page — so a "404: Not Found" body is never presented to the panel as an
-authoritative carrier record. The panel is told plainly that no record could be
-retrieved, and reasons from that. From an earlier run's rationale, verbatim:
+`0.1 GEN` to the buyer, `0.4 GEN` to the seller, reason code
+`QUANTITY_SHORTFALL`. **The panel never saw the number 2000.** It came from the
+remedy table both parties agreed before the goods shipped, and the live run
+asserts exactly that:
 
-> "The seller's recorded shipment time is not proof of loading and no
-> authoritative carrier record was retrieved to establish shipment before the
-> deadline."
+```
+PASS  payout_bps equals the agreed remedies for the breached issues
+      breached [QUANTITY] -> expected 2000, got 2000
+```
 
-That sentence is the protocol's own rule coming back out of a live validator
-panel — the rule exists precisely so a seller's own bookkeeping cannot stand in
-for a carrier record.
+That is the whole thesis, on chain: a judgment about documents, converted to
+money by arithmetic nobody can argue with.
 
-**Why the record is unreachable:** the contract binds a registry under
-`github.com/Olawalter/TradeLayer`, and that repository is not published yet.
-[`registry/MAEU-4471-2026`](registry/MAEU-4471-2026) is written and waiting;
-publishing it makes the `AUTHORITATIVE` path live without touching the contract.
-This is called out rather than left as an unexplained row of `INSUFFICIENT`.
+### The authoritative path, both ways
+
+`npm run probe` runs the real retrieval and the real panel and returns the
+result without touching state or any balance. It was run in both conditions,
+and both are worth recording:
+
+| Registry | `carrier.readable` | Excerpt |
+|---|---|---|
+| Unpublished (404) | `false` | empty |
+| Published | `true` | the record, with a sha256 over it |
+
+The empty excerpt is the important half: `gl.nondet.web.render` **raises** on a
+404 rather than returning GitHub's error page, so a "404: Not Found" body is
+never fenced to the panel as an authoritative carrier record. Latest probe:
+`0x4e851f8c79691eb8c22f4826432778b46389d586516ae9a90156c78a32717711`.
 
 ## 14. Known limitations
 
